@@ -1,0 +1,48 @@
+# Render Blueprint: creates the database, the API and the website in one go.
+# Dashboard -> New -> Blueprint -> pick your GitHub repo.
+# Values marked "sync: false" are asked for in the dashboard (you type them there, they are never stored in git).
+
+databases:
+  - name: techsociety-db
+    databaseName: techsociety
+    user: techsociety
+    plan: free            # check Render's current free-tier limits; upgrade for permanent data
+
+services:
+  # ---------------- BACKEND (FastAPI) ----------------
+  - type: web
+    name: techsociety-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL           # filled automatically from the database above
+        fromDatabase:
+          name: techsociety-db
+          property: connectionString
+      - key: SECRET_KEY             # generated automatically
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID       # YOU ADD: Google OAuth client ID (needed to sign in)
+        sync: false
+      - key: ADMIN_EMAILS           # YOU ADD: your Google e-mail(s), comma separated (max 8)
+        sync: false
+      - key: FRONTEND_ORIGIN        # YOU ADD: the website URL, e.g. https://techsociety-web.onrender.com
+        sync: false
+
+  # ---------------- FRONTEND (React + Vite, static site) ----------------
+  - type: web
+    name: techsociety-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL           # YOU ADD: the API URL, e.g. https://techsociety-api.onrender.com
+        sync: false
+      - key: VITE_GOOGLE_CLIENT_ID  # YOU ADD: the same Google client ID
+        sync: false

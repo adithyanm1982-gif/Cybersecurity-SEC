@@ -1,0 +1,11 @@
+{
+  "name": "tech-society-local-terminal",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OPTIONAL helper that gives the Terminal page a real shell. Local PC only. Not deployed.",
+  "dependencies": {
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.11.14",
+    "ws": "^8.18.0"
+  }
+}
