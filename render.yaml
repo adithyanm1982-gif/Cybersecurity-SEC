@@ -21,7 +21,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: DATABASE_URL           # filled automatically from the database above
+      - key: DATABASE_URL             # filled automatically from the database above
         fromDatabase:
           name: techsociety-db
           property: connectionString
@@ -31,12 +31,12 @@ services:
         sync: false
       - key: ADMIN_EMAILS           # YOU ADD: your Google e-mail(s), comma separated (max 8)
         sync: false
-      - key: FRONTEND_ORIGIN        # YOU ADD: the website URL, e.g. https://techsociety-web.onrender.com
+      - key: FRONTEND_ORIGIN        # YOU ADD: the website URL, e.g. https://cybersecurity-sec.onrender.com
         sync: false
 
   # ---------------- FRONTEND (React + Vite, static site) ----------------
   - type: web
-    name: techsociety-web
+    name: cybersecurity-sec
     runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
