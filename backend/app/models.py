@@ -57,3 +57,30 @@ class EventImage(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary)
     uploaded_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class EventCover(Base):
+    """NEW: a dedicated cover picture for an album (separate from the photos inside it).
+    At most one per event. `token` changes on every upload so browsers never show a stale cover."""
+
+    __tablename__ = "event_covers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), unique=True, index=True)
+    content_type: Mapped[str] = mapped_column(String(40))
+    token: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class TeamPhoto(Base):
+    """NEW: profile photo of one of the 8 people on the ABOUT page. slot = 0..7, left to right."""
+
+    __tablename__ = "team_photos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    slot: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    content_type: Mapped[str] = mapped_column(String(40))
+    token: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -1,5 +1,11 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Logo from '../components/Logo.jsx'
 import { Heading, PageNav } from '../components/Shared.jsx'
+import { useAuth } from '../auth.jsx'
+import { api, teamPhotoUrl } from '../api.js'
+
+const MAX_MB = 5
+const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 const DOMAINS = ['INTELLIGENT SYSTEMS', 'GAME & APP DEVELOPMENT', 'CYBERSECURITY', 'MACHINE LEARNING', 'DOMAIN 05 (TBA)']
 
@@ -39,6 +45,51 @@ const LinkedInIcon = () => (
 )
 
 export default function About() {
+  const { isAdmin } = useAuth()
+  const [photos, setPhotos] = useState({}) // slot number -> photo url
+  const [online, setOnline] = useState(false) // could we reach the server?
+  const [busy, setBusy] = useState(null) // slot being uploaded / removed
+  const [msg, setMsg] = useState(null) // { ok, t }
+  const fileRef = useRef(null)
+  const slotRef = useRef(null)
+
+  const load = useCallback(async () => {
+    try {
+      const rows = await api.get('/team')
+      const m = {}
+      rows.forEach((r) => { m[r.slot] = teamPhotoUrl(r.photo_id, r.token) })
+      setPhotos(m)
+      setOnline(true)
+    } catch {
+      setOnline(false) // the page still works, it just shows the PHOTO placeholders
+    }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const run = async (slot, fn, okText) => {
+    setBusy(slot); setMsg(null)
+    try { await fn(); await load(); setMsg({ ok: true, t: okText }) }
+    catch (e) { setMsg({ ok: false, t: e.message }) }
+    finally { setBusy(null) }
+  }
+
+  const pick = (slot) => { slotRef.current = slot; fileRef.current?.click() }
+  const onPick = (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    const slot = slotRef.current
+    if (!file || slot === null) return
+    if (!OK_TYPES.includes(file.type) || file.size > MAX_MB * 1024 * 1024) {
+      return setMsg({ ok: false, t: `Only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.` })
+    }
+    run(slot, () => api.putFile(`/team/${slot}/photo`, file), `Photo saved for ${TEAM[slot].role} (position ${slot + 1}).`)
+  }
+  const remove = (slot) => {
+    if (window.confirm('Remove this profile photo?')) run(slot, () => api.del(`/team/${slot}/photo`), 'Photo removed.')
+  }
+
+  const canEdit = isAdmin && online
+
   return (
     <div className="container">
       <Heading kicker="WHO WE ARE">About Us</Heading>
@@ -72,12 +123,20 @@ export default function About() {
       </section>
 
       <Heading kicker="THE CREW">Meet The Team</Heading>
+
+      {isAdmin && !online && <div className="notice warn center">Server not reachable: photo upload is unavailable right now. (Free servers need about a minute to wake up: refresh the page.)</div>}
+      {canEdit && <div className="notice ok center">ADMIN MODE: use the buttons under each person to upload, replace or remove a profile photo.</div>}
+      {msg && <div className={`notice ${msg.ok ? 'ok' : 'err'} center`} role="status">{msg.ok ? '✔' : '⚠'} {msg.t}</div>}
+      <input ref={fileRef} type="file" accept={OK_TYPES.join(',')} hidden onChange={onPick} />
+
       <section className="team">
         {TEAM.map((m, i) => (
           <div className="member reveal" key={i} style={{ transitionDelay: `${i * 60}ms` }}>
             <div className="avatar">
               <div className="avatar-ring" />
-              <div className="avatar-in"><span>PHOTO</span></div>
+              <div className="avatar-in">
+                {photos[i] ? <img src={photos[i]} alt={`${m.role} profile`} loading="lazy" /> : <span>PHOTO</span>}
+              </div>
             </div>
             <div className="m-name">XXX</div>
             <div className="m-dept">YYY</div>
@@ -86,6 +145,12 @@ export default function About() {
             <a className="linkedin" href={LINKEDIN[i]} target="_blank" rel="noopener noreferrer" title="LinkedIn profile" aria-label={`LinkedIn: ${m.role}`}>
               <LinkedInIcon />
             </a>
+            {canEdit && (
+              <div className="member-admin">
+                <button className="mini" disabled={busy !== null} onClick={() => pick(i)}>{busy === i ? 'WORKING...' : photos[i] ? '⬆ REPLACE' : '⬆ UPLOAD'}</button>
+                {photos[i] && <button className="mini danger" disabled={busy !== null} onClick={() => remove(i)} aria-label="Remove photo">🗑</button>}
+              </div>
+            )}
           </div>
         ))}
       </section>

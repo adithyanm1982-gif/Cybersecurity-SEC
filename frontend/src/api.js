@@ -17,6 +17,9 @@ export const setToken = (t) => {
 
 // image URL for an uploaded photo
 export const imgUrl = (id) => `${API}/images/${id}`
+// NEW: dedicated album cover and ABOUT-page profile photo (the ?v= token changes on every upload)
+export const coverUrl = (id, token) => `${API}/event-covers/${id}?v=${token}`
+export const teamPhotoUrl = (id, token) => `${API}/team/photo/${id}?v=${token}`
 
 function message(data, status) {
   const d = data && data.detail
@@ -64,6 +67,12 @@ export const api = {
     const form = new FormData()
     ;[...files].forEach((f) => form.append('files', f))
     return request(p, { method: 'POST', form })
+  },
+  // NEW: send ONE file (form field "file") with PUT: album cover / team photo
+  putFile: (p, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request(p, { method: 'PUT', form })
   },
   // download a protected file (CSV) with the login token
   download: async (path, filename) => {

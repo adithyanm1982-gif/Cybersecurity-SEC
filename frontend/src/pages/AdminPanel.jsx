@@ -49,7 +49,9 @@ export default function AdminPanel() {
   useEffect(() => { if (isAdmin) load() }, [isAdmin, load])
 
   if (loading) return <div className="container"><p className="lead center">LOADING...</p></div>
-  if (!user || !isAdmin) return <Navigate to="/login" state={{ from: '/admin' }} replace />
+  // not signed in -> login page; signed in but NOT an admin -> home (this also avoids a redirect loop)
+  if (!user) return <Navigate to="/login" state={{ from: '/admin', mode: 'login' }} replace />
+  if (!isAdmin) return <Navigate to="/" replace />
 
   return (
     <div className="container">

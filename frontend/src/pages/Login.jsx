@@ -10,7 +10,9 @@ const GOOGLE_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 export default function Login() {
   const { user, google } = useAuth()
   const nav = useNavigate()
-  const from = useLocation().state?.from // where to go after signing in (e.g. the JOIN page)
+  const loc = useLocation()
+  const from = loc.state?.from // where to go after signing in (e.g. the JOIN page)
+  const [mode, setMode] = useState(loc.state?.mode === 'signup' ? 'signup' : 'login') // same Google flow, different wording
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -24,7 +26,12 @@ export default function Login() {
 
   return (
     <div className="container narrow">
-      <Heading kicker="IDENTIFY YOURSELF">Sign In / Sign Up</Heading>
+      <Heading kicker="IDENTIFY YOURSELF">{mode === 'signup' ? 'Create Account' : 'Login'}</Heading>
+
+      <div className="auth-tabs">
+        <button className={`cbtn ${mode === 'login' ? '' : 'ghost'}`} onClick={() => setMode('login')}><span>LOGIN</span></button>
+        <button className={`cbtn ${mode === 'signup' ? '' : 'ghost'}`} onClick={() => setMode('signup')}><span>CREATE ACCOUNT</span></button>
+      </div>
 
       {!API_CONFIGURED && (
         <div className="notice warn">Backend address missing: set <code>VITE_API_URL</code> in the frontend environment variables.</div>
@@ -33,19 +40,22 @@ export default function Login() {
       <div className="tile auth-card reveal in">
         <div className="google-box">
           <div className="big-ico">🔐</div>
-          <h3>CONTINUE WITH GOOGLE</h3>
+          <h3>{mode === 'signup' ? 'CREATE YOUR ACCOUNT WITH GOOGLE' : 'LOGIN WITH GOOGLE'}</h3>
           <p className="auth-note">
-            One button for both. If this is your first time, your account is created automatically.
-            We only receive your name and e-mail address, never your Google password.
+            {mode === 'signup'
+              ? 'Pick your Google account below and your account is created on the spot.'
+              : 'Pick your Google account below. If this is your first time, an account is created automatically.'}
+            {' '}We only receive your name and e-mail address, never your Google password.
           </p>
 
           {GOOGLE_ID ? (
             <div className={busy ? 'g-busy' : ''}>
               <GoogleLogin
+                key={mode}
                 theme="filled_black"
                 shape="rectangular"
                 size="large"
-                text="continue_with"
+                text={mode === 'signup' ? 'signup_with' : 'signin_with'}
                 onSuccess={onSuccess}
                 onError={() => setErr('Google sign-in failed or was cancelled.')}
               />

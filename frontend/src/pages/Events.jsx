@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Heading, PageNav, CyberButton } from '../components/Shared.jsx'
 import { useAuth } from '../auth.jsx'
-import { api, imgUrl } from '../api.js'
+import { api, imgUrl, coverUrl } from '../api.js'
 
 const MAX_MB = 5
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -17,14 +17,18 @@ const samplePhotos = (i) =>
   }))
 
 // turn the API answer into what the page needs; empty folders get sample images
+// cover priority: uploaded cover  >  photo chosen as cover  >  first photo  >  sample
 function normalize(list) {
   return list.map((e, i) => {
     const real = e.images.map((im) => ({ id: im.id, url: imgUrl(im.id), full: imgUrl(im.id) }))
+    const custom = e.custom_cover ? coverUrl(e.custom_cover.id, e.custom_cover.token) : null
     return {
       id: e.id,
       name: e.name,
       coverId: e.cover_image_id,
-      cover: e.cover_image_id ? imgUrl(e.cover_image_id) : real[0]?.url || sample(`cyber-cover-${i + 1}`, 600),
+      coverChosen: Boolean(e.cover_chosen),
+      hasCustomCover: Boolean(custom),
+      cover: custom || (e.cover_image_id ? imgUrl(e.cover_image_id) : real[0]?.url) || sample(`cyber-cover-${i + 1}`, 600),
       photos: real.length ? real : samplePhotos(i),
       isSample: real.length === 0,
     }
@@ -33,8 +37,14 @@ function normalize(list) {
 
 // shown when the server cannot be reached
 const OFFLINE = Array.from({ length: 9 }, (_, i) => ({
-  id: null, name: 'EEE', coverId: null, cover: sample(`cyber-cover-${i + 1}`, 600), photos: samplePhotos(i), isSample: true,
+  id: null, name: 'EEE', coverId: null, coverChosen: false, hasCustomCover: false, cover: sample(`cyber-cover-${i + 1}`, 600), photos: samplePhotos(i), isSample: true,
 }))
+
+// returns an error text, or null when the file is fine
+const checkFile = (f) =>
+  !OK_TYPES.includes(f.type) || f.size > MAX_MB * 1024 * 1024
+    ? `"${f.name}": only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.`
+    : null
 
 export default function Events() {
   const { isAdmin, user } = useAuth()
@@ -45,7 +55,9 @@ export default function Events() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null) // {ok, t}
   const [rename, setRename] = useState('')
-  const fileRef = useRef(null)
+  const fileRef = useRef(null) // photos inside an album
+  const coverRef = useRef(null) // album cover picture
+  const coverFor = useRef(null) // id of the album whose cover is being changed
 
   const refresh = useCallback(async () => {
     try {
@@ -74,7 +86,8 @@ export default function Events() {
   }, [light, ev])
 
   const go = (i) => { setLight(null); setMsg(null); setOpen(i); window.scrollTo({ top: 0 }) }
-  const canEdit = isAdmin && !offline && ev && ev.id !== null
+  const adminOn = isAdmin && !offline // admin tools only when logged in as admin AND the server answered
+  const canEdit = adminOn && ev && ev.id !== null
 
   // run an admin action, then reload from the server
   const act = async (fn, okText) => {
@@ -84,19 +97,46 @@ export default function Events() {
     finally { setBusy(false) }
   }
 
+  // ----- photos inside an album -----
   const onPick = (e) => {
     const files = [...e.target.files]
     e.target.value = ''
     if (!files.length) return
-    const bad = files.find((f) => !OK_TYPES.includes(f.type) || f.size > MAX_MB * 1024 * 1024)
-    if (bad) return setMsg({ ok: false, t: `"${bad.name}": only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.` })
+    const bad = files.map(checkFile).find(Boolean)
+    if (bad) return setMsg({ ok: false, t: bad })
     act(() => api.upload(`/events/${ev.id}/images`, files), `${files.length} photo(s) uploaded to the server.`)
   }
 
+  // ----- album cover picture (works from the folder grid AND from inside the album) -----
+  const pickCover = (eventId) => { coverFor.current = eventId; coverRef.current?.click() }
+  const onPickCover = (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    const id = coverFor.current
+    if (!file || id == null) return
+    const bad = checkFile(file)
+    if (bad) return setMsg({ ok: false, t: bad })
+    act(() => api.putFile(`/events/${id}/cover-image`, file), 'Album cover uploaded.')
+  }
+  const removeCover = (e) => {
+    if (!window.confirm('Remove the cover picture of this album?')) return
+    act(async () => {
+      if (e.hasCustomCover) await api.del(`/events/${e.id}/cover-image`)
+      if (e.coverChosen) await api.put(`/events/${e.id}/cover`, { image_id: null }) // also forget a photo chosen as cover
+    }, 'Album cover removed.')
+  }
+  const hasCover = (e) => e.hasCustomCover || e.coverChosen
+
   const photoId = (p) => p.id !== null
+
+  const msgBox = msg ? <div className={`notice ${msg.ok ? 'ok' : 'err'} center`} role="status">{msg.ok ? '✔' : '⚠'} {msg.t}</div> : null
 
   return (
     <div className="container">
+      {/* hidden pickers shared by every button on this page */}
+      <input ref={fileRef} type="file" accept={OK_TYPES.join(',')} multiple hidden onChange={onPick} />
+      <input ref={coverRef} type="file" accept={OK_TYPES.join(',')} hidden onChange={onPickCover} />
+
       {!events && <p className="lead center">LOADING ARCHIVE...</p>}
 
       {events && !ev && (
@@ -104,19 +144,28 @@ export default function Events() {
           <Heading kicker="MEMORY ARCHIVE">Events Gallery</Heading>
           <p className="lead center reveal">Open a folder to browse the photos of past Cybersecurity domain events.</p>
           {offline && <div className="notice warn center">Server not reachable: showing sample data. (Free servers need ~1 minute to wake up: refresh the page.)</div>}
-          {isAdmin && !offline && <div className="notice ok center">ADMIN MODE: open a folder to upload, delete or rename.</div>}
-          {!user && <p className="hint center">Admin? <Link to="/login">Log in</Link> to upload photos.</p>}
+          {adminOn && <div className="notice ok center">ADMIN MODE: use the buttons under each album to change its cover, or open a folder to manage its photos.</div>}
+          {!user && <p className="hint center">Admin? Open <b>⚙ Settings</b> or <Link to="/login">log in</Link> to manage photos.</p>}
+          {msgBox}
           <section className="folders">
             {events.map((e, i) => (
-              <button className="folder reveal" key={e.id ?? i} onClick={() => go(i)} style={{ transitionDelay: `${i * 50}ms` }}>
-                <div className="folder-tab"><span>DIR_{String(i + 1).padStart(2, '0')}</span></div>
-                <div className="folder-body">
-                  <img src={e.cover} alt={`${e.name} cover`} loading="lazy" />
-                  <div className="folder-shine" />
-                  <div className="folder-count">{e.isSample ? 'SAMPLE' : `${e.photos.length} FILES`}</div>
-                </div>
-                <div className="folder-name">{e.name}</div>
-              </button>
+              <div className="folder-card reveal" key={e.id ?? i} style={{ transitionDelay: `${i * 50}ms` }}>
+                <button className="folder" onClick={() => go(i)}>
+                  <div className="folder-tab"><span>DIR_{String(i + 1).padStart(2, '0')}</span></div>
+                  <div className="folder-body">
+                    <img src={e.cover} alt={`${e.name} cover`} loading="lazy" />
+                    <div className="folder-shine" />
+                    <div className="folder-count">{e.isSample ? 'SAMPLE' : `${e.photos.length} FILES`}</div>
+                  </div>
+                  <div className="folder-name">{e.name}</div>
+                </button>
+                {adminOn && e.id !== null && (
+                  <div className="folder-tools">
+                    <button className="mini" disabled={busy} onClick={() => pickCover(e.id)}>⬆ {hasCover(e) ? 'CHANGE COVER' : 'UPLOAD COVER'}</button>
+                    {hasCover(e) && <button className="mini danger" disabled={busy} onClick={() => removeCover(e)} aria-label="Remove cover">🗑 COVER</button>}
+                  </div>
+                )}
+              </div>
             ))}
           </section>
           <PageNav />
@@ -134,21 +183,33 @@ export default function Events() {
           {canEdit && (
             <div className="admin-bar tile">
               <div className="kicker">// ADMIN TOOLS</div>
-              <div className="admin-row">
-                <input ref={fileRef} type="file" accept={OK_TYPES.join(',')} multiple hidden onChange={onPick} />
-                <CyberButton onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? 'WORKING...' : '⬆ UPLOAD PHOTOS'}</CyberButton>
-                <form
-                  className="rename"
-                  onSubmit={(e) => { e.preventDefault(); act(() => api.patch(`/events/${ev.id}`, { name: rename }), 'Event renamed.') }}
-                >
-                  <input value={rename} maxLength={120} onChange={(e) => setRename(e.target.value)} aria-label="Event name" />
-                  <button className="cbtn ghost" type="submit" disabled={busy || !rename.trim() || rename === ev.name}><span>RENAME</span></button>
-                </form>
+
+              <div className="admin-group">
+                <div className="admin-label">ALBUM COVER</div>
+                <div className="admin-row">
+                  <img className="cover-thumb" src={ev.cover} alt="Current album cover" />
+                  <CyberButton onClick={() => pickCover(ev.id)} disabled={busy}>{busy ? 'WORKING...' : `⬆ ${hasCover(ev) ? 'CHANGE' : 'UPLOAD'} COVER`}</CyberButton>
+                  {hasCover(ev) && <CyberButton variant="alt" onClick={() => removeCover(ev)} disabled={busy}>🗑 REMOVE COVER</CyberButton>}
+                </div>
               </div>
-              <p className="hint">JPG / PNG / WEBP / GIF, up to {MAX_MB} MB each, 10 at a time.{ev.isSample && ' These are SAMPLE photos: your first upload replaces them.'}</p>
+
+              <div className="admin-group">
+                <div className="admin-label">PHOTOS INSIDE THIS ALBUM</div>
+                <div className="admin-row">
+                  <CyberButton onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? 'WORKING...' : '⬆ UPLOAD PHOTOS'}</CyberButton>
+                  <form
+                    className="rename"
+                    onSubmit={(e) => { e.preventDefault(); act(() => api.patch(`/events/${ev.id}`, { name: rename }), 'Event renamed.') }}
+                  >
+                    <input value={rename} maxLength={120} onChange={(e) => setRename(e.target.value)} aria-label="Event name" />
+                    <button className="cbtn ghost" type="submit" disabled={busy || !rename.trim() || rename === ev.name}><span>RENAME</span></button>
+                  </form>
+                </div>
+              </div>
+              <p className="hint">JPG / PNG / WEBP / GIF, up to {MAX_MB} MB each, 10 at a time. Hover a photo to set it as cover or delete it.{ev.isSample && ' These are SAMPLE photos: your first upload replaces them.'}</p>
             </div>
           )}
-          {msg && <div className={`notice ${msg.ok ? 'ok' : 'err'} center`} role="status">{msg.ok ? '✔' : '⚠'} {msg.t}</div>}
+          {msgBox}
 
           <section className="photos">
             {ev.photos.map((p, j) => (

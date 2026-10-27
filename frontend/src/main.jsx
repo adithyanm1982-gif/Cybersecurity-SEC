@@ -6,6 +6,7 @@ import App from './App.jsx'
 import { SettingsProvider } from './settings.jsx'
 import { AuthProvider } from './auth.jsx'
 import './styles.css'
+import './ui.css' // NEW: header, settings, light-mode fixes, admin tools (loads AFTER styles.css)
 
 const googleId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 

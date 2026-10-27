@@ -1,0 +1,147 @@
+/* =====================================================
+   ui.css  -  loaded AFTER styles.css (see main.jsx)
+   1. Header with page links      2. Settings + account panel
+   3. About photo upload           4. Events admin tools
+   5. Terminal blank space         6. Light-mode audit fixes
+   7. Small quality fixes
+   ===================================================== */
+
+/* ---------- 7. quality fixes that apply to both themes ---------- */
+:root { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:root[data-theme='light'] :focus-visible { outline-color: color-mix(in srgb, var(--accent) 45%, #000); }
+
+/* ---------- 1. HEADER: row 1 = brand | logos | actions, row 2 = page links ---------- */
+.topbar { flex-wrap: wrap; align-items: center; row-gap: 0; padding: 6px 28px 0; }
+.brand-logo { margin-right: 0; }
+.brand-text small { display: block; }
+.head-logos { gap: 14px; padding: 0 14px; }
+.top-actions { gap: 10px; }
+.burger { display: none; }
+
+.nav {
+  order: 3; flex: 1 0 100%;
+  position: static; transform: none; transition: none; z-index: auto;
+  flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center;
+  gap: 6px; margin: 6px 0 0; padding: 6px 0 8px;
+  background: transparent; border: 0; border-top: 1px solid var(--line);
+  max-height: none; overflow: visible;
+}
+:root[data-theme='light'] .nav { background: transparent; }
+.nav a { padding: 9px 20px; font-size: 13px; letter-spacing: 0.14em; text-align: center; }
+/* the ADMIN link only exists for an admin login */
+.nav a.nav-admin { color: var(--accent2); box-shadow: inset 0 0 0 1px var(--accent2); }
+.nav a.nav-admin::before { background: var(--accent2); }
+.nav a.nav-admin:hover, .nav a.nav-admin.active { color: #000; }
+:root[data-theme='light'] .nav a.nav-admin { color: color-mix(in srgb, var(--accent2) 55%, #000); }
+:root[data-theme='light'] .nav a.nav-admin:hover,
+:root[data-theme='light'] .nav a.nav-admin.active { color: #000; }
+
+/* tablets & phones: the links fold into the burger menu */
+@media (max-width: 1000px) {
+  .topbar { flex-wrap: nowrap; padding: 8px 16px; }
+  .brand-text small { display: none; }
+  .burger { display: block; }
+  .nav {
+    position: fixed; top: 72px; left: 0; right: 0; z-index: -1;
+    flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start;
+    gap: 4px; margin: 0; padding: 12px 14px 16px;
+    background: rgba(0, 0, 0, 0.97); border: 0; border-bottom: 2px solid var(--accent);
+    transform: translateY(-130%); transition: transform 0.35s;
+    max-height: calc(100vh - 72px); overflow-y: auto;
+  }
+  :root[data-theme='light'] .nav { background: rgba(255, 255, 255, 0.98); }
+  .nav.open { transform: none; }
+  .nav a { padding: 14px; font-size: 14px; text-align: left; }
+}
+@media (max-width: 800px) {
+  .head-logos { display: none; }
+  .auth-chip .auth-name { display: none; }
+}
+/* small phones: no room for the account chip: log out / admin console are inside SETTINGS (the gear) */
+@media (max-width: 600px) {
+  .auth-chip { display: none; }
+  .top-actions { gap: 8px; }
+}
+
+/* ---------- 2. SETTINGS: account card + the single UI CONTROLS button ---------- */
+.settings { gap: 18px; }
+.acct { display: grid; gap: 12px; }
+.acct .set-title { margin-bottom: 0; }
+.acct-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.acct-avatar { flex: none; width: 42px; height: 42px; display: grid; place-items: center; font-family: var(--font-h); font-weight: 800; font-size: 18px; background: var(--accent); color: #000; border-radius: 50%; }
+.acct-info { display: grid; min-width: 0; flex: 1; }
+.acct-info b { font-weight: 700; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-info small { font-family: var(--font-m); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-actions { display: grid; gap: 10px; }
+.acct-note { font-family: var(--font-m); font-size: 13px; color: var(--muted); line-height: 1.6; }
+.acc.open .acc-body { max-height: 1600px; }
+.settings .acc-head { padding: 16px; font-size: 14px; }
+
+/* ---------- 3. ABOUT: admin photo upload ---------- */
+.avatar-in img { object-position: center top; }
+.member-admin { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+.member-admin .mini { flex: 0 1 auto; padding: 7px 10px; white-space: nowrap; }
+
+/* ---------- 4. EVENTS: admin tools on the folder grid + inside an album ---------- */
+.folder-card { position: relative; }
+.folder { width: 100%; }
+.folder-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+.folder-tools .mini { flex: 0 1 auto; padding: 7px 12px; }
+.admin-group { display: grid; gap: 8px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.admin-label { font-family: var(--font-m); font-size: 12px; letter-spacing: 0.2em; color: var(--muted); }
+.cover-thumb { width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--accent); }
+
+/* ---------- 5. TERMINAL: intentionally empty for now ---------- */
+.terminal-slot { min-height: 420px; }
+
+/* ---------- 6. LIGHT-MODE AUDIT ----------
+   Fixes for places where yellow / cyan neon text, white borders or
+   see-through backgrounds became unreadable on the light background. */
+:root[data-theme='light'] .domains li.hot,
+:root[data-theme='light'] .c-val:hover,
+:root[data-theme='light'] .path b { color: #7a5f00; text-shadow: none; }
+:root[data-theme='light'] .folder:hover .folder-name,
+:root[data-theme='light'] .footer-row .blink,
+:root[data-theme='light'] .success .big { color: color-mix(in srgb, var(--accent) 40%, #000); text-shadow: none; }
+:root[data-theme='light'] .acct-info small { color: rgba(0, 0, 0, 0.75); }
+:root[data-theme='light'] .card-ico,
+:root[data-theme='light'] .big-ico { filter: none; }
+
+/* inputs were almost transparent white on white */
+:root[data-theme='light'] .form input,
+:root[data-theme='light'] .form select,
+:root[data-theme='light'] .form textarea,
+:root[data-theme='light'] .rename input { background: #fff; color: #000; border-color: rgba(0, 0, 0, 0.45); }
+:root[data-theme='light'] .form input:focus,
+:root[data-theme='light'] .form select:focus,
+:root[data-theme='light'] .form textarea:focus,
+:root[data-theme='light'] .rename input:focus { background: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+:root[data-theme='light'] .form input::placeholder,
+:root[data-theme='light'] .form textarea::placeholder { color: rgba(0, 0, 0, 0.5); }
+
+/* ghost buttons: a cyan / yellow ring is invisible on white */
+:root[data-theme='light'] .cbtn.ghost { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, #000); }
+:root[data-theme='light'] .cbtn.ghost:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* panels, tiles, corners */
+:root[data-theme='light'] .tile:hover { box-shadow: 0 6px 26px rgba(0, 0, 0, 0.18); }
+:root[data-theme='light'] .hud-corner { opacity: 0.55; filter: none; border-color: color-mix(in srgb, var(--accent) 45%, #000); }
+:root[data-theme='light'] .domains li,
+:root[data-theme='light'] .acct-card { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme='light'] .notice { background: rgba(0, 0, 0, 0.04); }
+:root[data-theme='light'] .notice.warn { background: rgba(252, 238, 10, 0.3); }
+:root[data-theme='light'] .notice.err { background: rgba(255, 49, 49, 0.12); }
+:root[data-theme='light'] .notice.ok { background: rgba(57, 255, 20, 0.18); }
+:root[data-theme='light'] .ctable tr:hover td { background: rgba(0, 0, 0, 0.05); }
+
+/* settings panel */
+:root[data-theme='light'] .settings { box-shadow: -10px 0 40px rgba(0, 0, 0, 0.25); }
+:root[data-theme='light'] .acc { background: rgba(0, 0, 0, 0.035); }
+:root[data-theme='light'] .acc-head:hover,
+:root[data-theme='light'] .acc.open .acc-head { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+:root[data-theme='light'] .swatch.on { border-color: #000; }
+:root[data-theme='light'] .switch.on { background: color-mix(in srgb, var(--accent) 25%, #fff); box-shadow: none; }
+:root[data-theme='light'] .switch.on i { box-shadow: none; }
+:root[data-theme='light'] .set-title { text-shadow: none; }
