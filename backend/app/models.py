@@ -84,3 +84,19 @@ class TeamPhoto(Base):
     token: Mapped[str] = mapped_column(String(32))
     data: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+class TeamMember(Base):
+    """NEW: one profile card on the ABOUT page (admins can add, edit, reorder and delete them).
+    The photo (optional) lives in the same row. `photo_token` changes on every upload so browsers never show a stale picture."""
+
+    __tablename__ = "team_members"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    role: Mapped[str] = mapped_column(String(120), default="")
+    department: Mapped[str] = mapped_column(String(120), default="")
+    linkedin: Mapped[str] = mapped_column(String(300), default="")
+    photo_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    photo_token: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    photo_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)   

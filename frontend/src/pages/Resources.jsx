@@ -25,7 +25,7 @@ export default function Resources() {
   const p = PATHS[tab]
   return (
     <div className="container" onClick={() => setActive(null)}>
-      <Heading kicker="KNOWLEDGE BASE">Resources</Heading>
+      <Heading kicker="Knowledge base">Resources</Heading>
       <p className="lead center reveal">A learning roadmap and toolkit for new members. (Sample content, to be updated.)</p>
 
       <div className="tabs reveal">
@@ -35,19 +35,19 @@ export default function Resources() {
       </div>
 
       <section className="tile path" key={tab}>
-        <div className="kicker">// LEVEL 0{tab + 1}</div>
+        <div className="kicker">Level 0{tab + 1}</div>
         <h3>{p.title}</h3>
         <ul>
           {p.items.map((it, i) => (
-            <li key={it} style={{ animationDelay: `${i * 90}ms` }}><b>&gt;</b> {it}</li>
+            <li key={it} style={{ animationDelay: `${i * 80}ms` }}><b>›</b> {it}</li>
           ))}
         </ul>
       </section>
 
-      <Heading kicker="TOOLKIT · HOVER OR TAP A TOOL">Tools We Use</Heading>
+      <Heading kicker="Toolkit · hover or tap a tool">Tools We Use</Heading>
       <section className="chips">
         {TOOLS.map((t, i) => (
-          <div className={`chip-wrap reveal ${active === t.name ? 'on' : ''}`} key={t.name} style={{ transitionDelay: `${i * 50}ms` }}>
+          <div className={`chip-wrap reveal ${active === t.name ? 'on' : ''}`} key={t.name} style={{ transitionDelay: `${i * 40}ms` }}>
             <button
               className="chip"
               onClick={(e) => { e.stopPropagation(); setActive(active === t.name ? null : t.name) }}
@@ -57,7 +57,7 @@ export default function Resources() {
               {t.name}
             </button>
             <div className="tool-pop" role="tooltip">
-              <h4><em>&gt;_</em>{t.name.toUpperCase()}</h4>
+              <h4>{t.name}</h4>
               <p>{t.desc}</p>
               <span className="tag">{t.tag}</span>
             </div>

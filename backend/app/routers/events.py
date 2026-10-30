@@ -2,7 +2,7 @@ import os
 import secrets
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -15,6 +15,7 @@ router = APIRouter(tags=["events"])
 
 MAX_FILES_PER_REQUEST = 10
 MAX_IMAGES_PER_EVENT = 200
+MAX_EVENTS = 60
 IMMUTABLE = {"Cache-Control": "public, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff"}
 
 
@@ -58,7 +59,7 @@ def _event_json(ev: Event, image_ids: list[int], custom_cover: tuple[int, str] |
         "cover_image_id": cover,
         # True only when an admin really picked one of the photos as the cover (not just "the first photo")
         "cover_chosen": ev.cover_image_id in image_ids,
-        # NEW: the dedicated cover picture (wins over cover_image_id when present)
+        # the dedicated cover picture (wins over cover_image_id when present)
         "custom_cover": {"id": custom_cover[0], "token": custom_cover[1]} if custom_cover else None,
         "images": [{"id": i} for i in image_ids],
     }
@@ -97,6 +98,29 @@ def get_cover_image(cover_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------- admin only ----------------
+@router.post("/events")
+def create_event(body: EventRename, db: Session = Depends(get_db), _: GoogleUser = Depends(require_admin)):
+    """NEW: add an album (folder) at the end of the list."""
+    if (db.scalar(select(func.count(Event.id))) or 0) >= MAX_EVENTS:
+        raise HTTPException(400, f"At most {MAX_EVENTS} albums are allowed.")
+    last = db.scalar(select(func.max(Event.position)))
+    ev = Event(name=body.name.strip(), position=0 if last is None else last + 1)
+    db.add(ev)
+    db.commit()
+    return _event_json(ev, [], None)
+
+
+@router.delete("/events/{event_id}")
+def delete_event(event_id: int, db: Session = Depends(get_db), _: GoogleUser = Depends(require_admin)):
+    """NEW: delete an album together with ALL of its photos and its cover."""
+    ev = _event_or_404(db, event_id)
+    db.execute(delete(EventImage).where(EventImage.event_id == ev.id))
+    db.execute(delete(EventCover).where(EventCover.event_id == ev.id))
+    db.delete(ev)
+    db.commit()
+    return {"ok": True}
+
+
 @router.patch("/events/{event_id}")
 def rename_event(event_id: int, body: EventRename, db: Session = Depends(get_db), _: GoogleUser = Depends(require_admin)):
     ev = _event_or_404(db, event_id)
@@ -163,7 +187,6 @@ def set_cover(event_id: int, body: CoverIn, db: Session = Depends(get_db), _: Go
     return {"ok": True}
 
 
-# ---- NEW: upload / remove a dedicated album cover ----
 @router.put("/events/{event_id}/cover-image")
 async def upload_cover_image(
     event_id: int,

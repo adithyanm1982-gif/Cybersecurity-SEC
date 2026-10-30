@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useSettings } from '../settings.jsx'
 
-// Dotted wave terrain (inspired by the theme image) + optional code rain
+// A calm dotted terrain in the background, plus an optional faint code stream (Settings > UI Controls).
 export default function Background() {
   const wave = useRef(null)
   const rain = useRef(null)
@@ -16,7 +16,7 @@ export default function Background() {
     addEventListener('resize', resize)
     const COLS = 90, ROWS = 46
     const draw = () => {
-      t += 0.012
+      t += 0.006 // slow and steady
       ctx.clearRect(0, 0, c.width, c.height)
       const light = document.documentElement.dataset.theme === 'light'
       const W = c.width, H = c.height
@@ -30,8 +30,8 @@ export default function Background() {
           const h = Math.sin(u * 7 + t * 1.3 + z * 4) * 22 + Math.cos(u * 3.5 - t + z * 7) * 30 + Math.sin(u * 14 + t * 2) * 6
           const y = y0 - h * persp
           const a = Math.min(1, 0.15 + z * 0.9) * (0.35 + 0.65 * ((h + 58) / 116))
-          ctx.fillStyle = light ? `rgba(10,20,40,${a * 0.8})` : `rgba(235,235,245,${a})`
-          const sz = 0.6 + z * 1.6
+          ctx.fillStyle = light ? `rgba(15,30,60,${a * 0.55})` : `rgba(190,205,225,${a * 0.6})`
+          const sz = 0.6 + z * 1.5
           ctx.fillRect(x, y, sz, sz)
         }
       }
@@ -45,7 +45,7 @@ export default function Background() {
     const c = rain.current
     const ctx = c.getContext('2d')
     let raf
-    const size = 16
+    const size = 18
     let drops = []
     const resize = () => {
       c.width = innerWidth; c.height = innerHeight
@@ -53,25 +53,21 @@ export default function Background() {
     }
     resize()
     addEventListener('resize', resize)
-    const glyphs = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ01{}<>/\\$#%&*+=ABCDEF'
+    const glyphs = '01{}<>/\\$#%&*+=ABCDEF'
     let last = 0
     const loop = (ts) => {
       raf = requestAnimationFrame(loop)
       if (!s.rain) { ctx.clearRect(0, 0, c.width, c.height); return }
-      if (ts - last < 55) return
+      if (ts - last < 80) return
       last = ts
-      ctx.fillStyle = 'rgba(0,0,0,0.12)'
       ctx.globalCompositeOperation = 'destination-out'
+      ctx.fillStyle = 'rgba(0,0,0,0.1)'
       ctx.fillRect(0, 0, c.width, c.height)
       ctx.globalCompositeOperation = 'source-over'
-      ctx.font = `${size}px "Share Tech Mono", monospace`
-      const col = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#00f0ff'
+      ctx.font = `${size}px "IBM Plex Mono", monospace`
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#22d3ee'
       drops.forEach((y, i) => {
-        const ch = glyphs[Math.floor(Math.random() * glyphs.length)]
-        ctx.fillStyle = Math.random() > 0.96 ? '#ffffff' : col
-        ctx.globalAlpha = 0.5
-        ctx.fillText(ch, i * size, y * size)
-        ctx.globalAlpha = 1
+        ctx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], i * size, y * size)
         if (y * size > c.height && Math.random() > 0.975) drops[i] = 0
         drops[i]++
       })
@@ -85,8 +81,6 @@ export default function Background() {
       <canvas ref={wave} className="bg-canvas" />
       <canvas ref={rain} className="bg-canvas rain" />
       <div className="bg-vignette" />
-      <div className="bg-scanlines" />
-      <div className="bg-noise" />
     </>
   )
 }

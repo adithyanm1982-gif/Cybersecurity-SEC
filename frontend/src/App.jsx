@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Intro from './components/Intro.jsx'
 import Background from './components/Background.jsx'
-import CursorFx from './components/CursorFx.jsx'
+import SoundFx from './components/SoundFx.jsx'
 import Navbar from './components/Navbar.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import { Footer } from './components/Shared.jsx'
@@ -34,11 +34,10 @@ export default function App() {
   return (
     <>
       <Background />
-      <CursorFx />
+      <SoundFx />
       {!booted && <Intro onDone={() => setBooted(true)} />}
       {booted && (
         <>
-          <div className="hud-corner tl" /><div className="hud-corner tr" /><div className="hud-corner bl" /><div className="hud-corner br" />
           <Navbar onSettings={() => setSettingsOpen(true)} />
           <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
           <main key={loc.pathname} className="page">

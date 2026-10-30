@@ -1,104 +1,95 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Logo from '../components/Logo.jsx'
-import { Heading, PageNav } from '../components/Shared.jsx'
+import Icon from '../components/Icons.jsx'
+import { Heading, PageNav, CyberButton } from '../components/Shared.jsx'
 import { useAuth } from '../auth.jsx'
-import { api, teamPhotoUrl } from '../api.js'
+import { api, memberPhotoUrl } from '../api.js'
+import { sfx } from '../fx.js'
 
 const MAX_MB = 5
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-
 const DOMAINS = ['INTELLIGENT SYSTEMS', 'GAME & APP DEVELOPMENT', 'CYBERSECURITY', 'MACHINE LEARNING', 'DOMAIN 05 (TBA)']
+const BLANK = { id: null, name: '', role: '', department: '', linkedin: '' }
 
-/* ============================================================
-   ADD THE REAL LINKEDIN PROFILE LINKS HERE
-   Order (left to right):
-   1 Faculty Coordinator | 2-4 Student Coordinators
-   5 Secretary           | 6-8 Joint Secretaries
-   Example: 'https://www.linkedin.com/in/your-name/'
-   ============================================================ */
-const LINKEDIN = [
-  'https://www.linkedin.com/', // 1 Faculty Coordinator
-  'https://www.linkedin.com/', // 2 Student Coordinator
-  'https://www.linkedin.com/', // 3 Student Coordinator
-  'https://www.linkedin.com/', // 4 Student Coordinator
-  'https://www.linkedin.com/', // 5 Secretary
-  'https://www.linkedin.com/', // 6 Joint Secretary
-  'https://www.linkedin.com/', // 7 Joint Secretary
-  'https://www.linkedin.com/', // 8 Joint Secretary
-]
-
-const TEAM = [
-  { role: 'FACULTY COORDINATOR' },
-  { role: 'STUDENT COORDINATOR' },
-  { role: 'STUDENT COORDINATOR' },
-  { role: 'STUDENT COORDINATOR' },
-  { role: 'SECRETARY' },
-  { role: 'JOINT SECRETARY' },
-  { role: 'JOINT SECRETARY' },
-  { role: 'JOINT SECRETARY' },
-]
-
-const LinkedInIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
-  </svg>
-)
+// only real web links may sit behind the LinkedIn icon
+const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : null)
 
 export default function About() {
   const { isAdmin } = useAuth()
-  const [photos, setPhotos] = useState({}) // slot number -> photo url
-  const [online, setOnline] = useState(false) // could we reach the server?
-  const [busy, setBusy] = useState(null) // slot being uploaded / removed
+  const [members, setMembers] = useState(null) // null = loading
+  const [online, setOnline] = useState(true)
+  const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null) // { ok, t }
+  const [form, setForm] = useState(null) // the profile being added / edited (null = dialog closed)
+  const [formErr, setFormErr] = useState('')
   const fileRef = useRef(null)
-  const slotRef = useRef(null)
+  const photoFor = useRef(null) // id of the profile whose photo is being changed
 
   const load = useCallback(async () => {
     try {
-      const rows = await api.get('/team')
-      const m = {}
-      rows.forEach((r) => { m[r.slot] = teamPhotoUrl(r.photo_id, r.token) })
-      setPhotos(m)
+      setMembers(await api.get('/team/members'))
       setOnline(true)
     } catch {
-      setOnline(false) // the page still works, it just shows the PHOTO placeholders
+      setMembers((m) => m || [])
+      setOnline(false)
     }
   }, [])
   useEffect(() => { load() }, [load])
 
-  const run = async (slot, fn, okText) => {
-    setBusy(slot); setMsg(null)
-    try { await fn(); await load(); setMsg({ ok: true, t: okText }) }
-    catch (e) { setMsg({ ok: false, t: e.message }) }
-    finally { setBusy(null) }
-  }
-
-  const pick = (slot) => { slotRef.current = slot; fileRef.current?.click() }
-  const onPick = (e) => {
-    const file = e.target.files[0]
-    e.target.value = ''
-    const slot = slotRef.current
-    if (!file || slot === null) return
-    if (!OK_TYPES.includes(file.type) || file.size > MAX_MB * 1024 * 1024) {
-      return setMsg({ ok: false, t: `Only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.` })
-    }
-    run(slot, () => api.putFile(`/team/${slot}/photo`, file), `Photo saved for ${TEAM[slot].role} (position ${slot + 1}).`)
-  }
-  const remove = (slot) => {
-    if (window.confirm('Remove this profile photo?')) run(slot, () => api.del(`/team/${slot}/photo`), 'Photo removed.')
+  // run an admin action, then reload the list
+  const act = async (fn, okText) => {
+    setBusy(true); setMsg(null)
+    try { await fn(); await load(); setMsg({ ok: true, t: okText }); sfx.play('success'); return true }
+    catch (e) { setMsg({ ok: false, t: e.message }); sfx.play('error'); return false }
+    finally { setBusy(false) }
   }
 
   const canEdit = isAdmin && online
 
+  // ----- photo -----
+  const pickPhoto = (id) => { photoFor.current = id; fileRef.current?.click() }
+  const onPhoto = (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    const id = photoFor.current
+    if (!file || id == null) return
+    if (!OK_TYPES.includes(file.type) || file.size > MAX_MB * 1024 * 1024) {
+      setMsg({ ok: false, t: `Only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.` }); sfx.play('error'); return
+    }
+    act(() => api.putFile(`/team/members/${id}/photo`, file), 'Photo saved.')
+  }
+  const removePhoto = (m) => window.confirm('Remove this profile photo?') && act(() => api.del(`/team/members/${m.id}/photo`), 'Photo removed.')
+
+  // ----- profile details (name, role, department, LinkedIn) -----
+  const openForm = (m) => { setFormErr(''); setForm(m ? { id: m.id, name: m.name, role: m.role, department: m.department, linkedin: m.linkedin } : { ...BLANK }) }
+  const onField = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const save = async (e) => {
+    e.preventDefault()
+    const link = form.linkedin.trim()
+    if (link && !/^https?:\/\//i.test(link)) return setFormErr('The LinkedIn link must start with https://')
+    const body = { name: form.name, role: form.role, department: form.department, linkedin: link }
+    const ok = await act(
+      () => (form.id ? api.put(`/team/members/${form.id}`, body) : api.post('/team/members', body)),
+      form.id ? 'Profile updated.' : 'Profile added.'
+    )
+    if (ok) setForm(null)
+  }
+
+  // ----- delete / reorder -----
+  const remove = (m) =>
+    window.confirm(`Delete the profile of "${m.name || m.role || 'this person'}" completely? This cannot be undone.`) &&
+    act(() => api.del(`/team/members/${m.id}`), 'Profile deleted.')
+  const move = (m, direction) => act(() => api.post(`/team/members/${m.id}/move`, { direction }), 'Order updated.')
+
   return (
     <div className="container">
-      <Heading kicker="WHO WE ARE">About Us</Heading>
+      <Heading kicker="Who we are">About Us</Heading>
 
       <section className="about-split">
         <article className="tile about-card reveal">
           <Logo file="college.png" label="Saveetha Engineering College" size={110} banner trim="alpha" className="about-logo" />
           <h3>SAVEETHA ENGINEERING COLLEGE</h3>
-          <div className="tags"><span>AUTONOMOUS</span><span className="y">AFFILIATED TO ANNA UNIVERSITY</span></div>
+          <div className="tags"><span>AUTONOMOUS</span><span>AFFILIATED TO ANNA UNIVERSITY</span></div>
           <p>
             Saveetha Engineering College, established in 2001 under the motto “Be the Best”, is an autonomous institution
             affiliated to Anna University. It is committed to academic excellence, research and innovation, producing
@@ -107,9 +98,9 @@ export default function About() {
         </article>
 
         <article className="tile about-card reveal" style={{ transitionDelay: '120ms' }}>
-          <Logo file="techsociety.png" label="The Tech Society" size={190} invertOnLight className="about-logo ts" />
+          <Logo file="techsociety.png" label="The Tech Society" size={170} invertOnLight className="about-logo ts" />
           <h3>THE TECH SOCIETY</h3>
-          <div className="tags"><span>COLLABORATE</span><span className="y">INNOVATE</span></div>
+          <div className="tags"><span>COLLABORATE</span><span>INNOVATE</span></div>
           <p>
             The Tech Society is the student technology community of the college, bringing together learners to build
             projects, host contests and grow with industry exposure. It is organised into five domains. (Sample text, to be updated.)
@@ -122,38 +113,80 @@ export default function About() {
         </article>
       </section>
 
-      <Heading kicker="THE CREW">Meet The Team</Heading>
+      <Heading kicker="The crew">Meet The Team</Heading>
 
-      {isAdmin && !online && <div className="notice warn center">Server not reachable: photo upload is unavailable right now. (Free servers need about a minute to wake up: refresh the page.)</div>}
-      {canEdit && <div className="notice ok center">ADMIN MODE: use the buttons under each person to upload, replace or remove a profile photo.</div>}
-      {msg && <div className={`notice ${msg.ok ? 'ok' : 'err'} center`} role="status">{msg.ok ? '✔' : '⚠'} {msg.t}</div>}
-      <input ref={fileRef} type="file" accept={OK_TYPES.join(',')} hidden onChange={onPick} />
+      {isAdmin && !online && <div className="notice warn center">Server not reachable: editing is unavailable right now. (Free servers need about a minute to wake up: refresh the page.)</div>}
+      {!isAdmin && !online && <div className="notice warn center">Team details are temporarily unavailable. Please try again shortly.</div>}
+      {canEdit && <div className="notice ok center">Admin mode: use the buttons on each profile to edit details, change the photo, reorder or delete. Use “Add profile” to add a new person.</div>}
+      {msg && <div className={`notice ${msg.ok ? 'ok' : 'err'} center`} role="status">{msg.t}</div>}
+      <input ref={fileRef} type="file" accept={OK_TYPES.join(',')} hidden onChange={onPhoto} />
+
+      {members === null && <p className="lead center">Loading team...</p>}
 
       <section className="team">
-        {TEAM.map((m, i) => (
-          <div className="member reveal" key={i} style={{ transitionDelay: `${i * 60}ms` }}>
-            <div className="avatar">
-              <div className="avatar-ring" />
-              <div className="avatar-in">
-                {photos[i] ? <img src={photos[i]} alt={`${m.role} profile`} loading="lazy" /> : <span>PHOTO</span>}
+        {(members || []).map((m, i) => {
+          const link = safeUrl(m.linkedin)
+          return (
+            <article className="tile member reveal" key={m.id} style={{ transitionDelay: `${Math.min(i, 7) * 50}ms` }}>
+              <div className="avatar">
+                <div className="avatar-ring" />
+                <div className="avatar-in">
+                  {m.photo_token ? <img src={memberPhotoUrl(m.id, m.photo_token)} alt={m.name ? `Photo of ${m.name}` : 'Profile photo'} loading="lazy" /> : <Icon name="user" size={46} />}
+                </div>
               </div>
-            </div>
-            <div className="m-name">XXX</div>
-            <div className="m-dept">YYY</div>
-            <div className="m-role">ZZZ</div>
-            <div className="m-title">{m.role}</div>
-            <a className="linkedin" href={LINKEDIN[i]} target="_blank" rel="noopener noreferrer" title="LinkedIn profile" aria-label={`LinkedIn: ${m.role}`}>
-              <LinkedInIcon />
-            </a>
-            {canEdit && (
-              <div className="member-admin">
-                <button className="mini" disabled={busy !== null} onClick={() => pick(i)}>{busy === i ? 'WORKING...' : photos[i] ? '⬆ REPLACE' : '⬆ UPLOAD'}</button>
-                {photos[i] && <button className="mini danger" disabled={busy !== null} onClick={() => remove(i)} aria-label="Remove photo">🗑</button>}
-              </div>
-            )}
-          </div>
-        ))}
+              <h3 className="m-name">{m.name || <span className="m-pending">Name to be announced</span>}</h3>
+              {m.role && <div className="m-role">{m.role}</div>}
+              {m.department && <div className="m-dept">{m.department}</div>}
+              {link && (
+                <a className="linkedin" href={link} target="_blank" rel="noopener noreferrer" title="LinkedIn profile" aria-label={`LinkedIn profile of ${m.name || m.role}`}>
+                  <Icon name="linkedin" size={18} />
+                </a>
+              )}
+
+              {canEdit && (
+                <div className="member-admin">
+                  <button className="mini" disabled={busy} onClick={() => openForm(m)}><Icon name="edit" size={13} /> Edit details</button>
+                  <button className="mini" disabled={busy} onClick={() => pickPhoto(m.id)}><Icon name="upload" size={13} /> {m.photo_token ? 'Replace photo' : 'Upload photo'}</button>
+                  {m.photo_token && <button className="mini" disabled={busy} onClick={() => removePhoto(m)}><Icon name="image" size={13} /> Remove photo</button>}
+                  <div className="member-order">
+                    <button className="mini" disabled={busy || i === 0} onClick={() => move(m, 'up')} aria-label="Move earlier"><Icon name="chevron-left" size={14} /></button>
+                    <button className="mini" disabled={busy || i === members.length - 1} onClick={() => move(m, 'down')} aria-label="Move later"><Icon name="chevron-right" size={14} /></button>
+                    <button className="mini danger" disabled={busy} onClick={() => remove(m)}><Icon name="trash" size={13} /> Delete profile</button>
+                  </div>
+                </div>
+              )}
+            </article>
+          )
+        })}
+
+        {canEdit && (
+          <button className="member-add" disabled={busy} onClick={() => openForm(null)}>
+            <Icon name="plus" size={26} />
+            <span>Add profile</span>
+          </button>
+        )}
       </section>
+
+      {members && online && members.length === 0 && !isAdmin && <p className="lead center">No team profiles have been published yet.</p>}
+
+      {/* add / edit dialog */}
+      {form && (
+        <div className="modal-back" onClick={() => setForm(null)}>
+          <form className="modal form" onClick={(e) => e.stopPropagation()} onSubmit={save}>
+            <h3>{form.id ? 'Edit profile' : 'Add profile'}</h3>
+            <label>Name<input autoFocus maxLength={120} value={form.name} onChange={onField('name')} placeholder="Full name" /></label>
+            <label>Role<input maxLength={120} value={form.role} onChange={onField('role')} placeholder="e.g. Student Coordinator" /></label>
+            <label>Department<input maxLength={120} value={form.department} onChange={onField('department')} placeholder="e.g. Computer Science and Engineering" /></label>
+            <label>LinkedIn link (optional)<input maxLength={300} value={form.linkedin} onChange={onField('linkedin')} placeholder="https://www.linkedin.com/in/..." inputMode="url" /></label>
+            {formErr && <div className="notice err" role="alert">{formErr}</div>}
+            <div className="modal-actions">
+              <CyberButton variant="ghost" onClick={() => setForm(null)}>Cancel</CyberButton>
+              <CyberButton type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save'}</CyberButton>
+            </div>
+            {!form.id && <p className="hint">You can upload the photo right after adding the profile.</p>}
+          </form>
+        </div>
+      )}
 
       <PageNav />
     </div>

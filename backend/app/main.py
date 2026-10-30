@@ -8,8 +8,9 @@ from sqlalchemy import select
 from .config import settings
 from .csvstore import ensure_csv
 from .database import Base, SessionLocal, engine
-from .models import Event
+from .models import CsvFile, Event
 from .routers import admin, applications, auth, events, team
+from .routers.team import seed_team
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("techsociety")
@@ -19,11 +20,15 @@ EVENT_COUNT = 9
 
 def seed() -> None:
     with SessionLocal() as db:
-        # the nine event folders
-        if not db.scalars(select(Event.id)).first():
-            for i in range(EVENT_COUNT):
-                db.add(Event(name="EEE", position=i))
+        # the starting event folders: created ONCE. A marker row stops them coming back after an admin deletes them.
+        if not db.get(CsvFile, "_events_seeded"):
+            if not db.scalars(select(Event.id)).first():
+                for i in range(EVENT_COUNT):
+                    db.add(Event(name="EEE", position=i))
+            db.add(CsvFile(name="_events_seeded", content="1"))
             db.commit()
+        # the starting team profiles (also carries over photos uploaded by the older version)
+        seed_team(db)
         # the single CSV file (header row only, until the first form arrives)
         ensure_csv(db)
 

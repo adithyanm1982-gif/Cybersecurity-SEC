@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Heading, CyberButton, BackBar } from '../components/Shared.jsx'
+import Icon from '../components/Icons.jsx'
 import { useAuth } from '../auth.jsx'
 import { api } from '../api.js'
 
@@ -36,13 +37,14 @@ export default function AdminPanel() {
   const [tab, setTab] = useState('forms')
   const [forms, setForms] = useState([])
   const [users, setUsers] = useState([])
+  const [folders, setFolders] = useState(0)
   const [err, setErr] = useState('')
 
   const load = useCallback(async () => {
     setErr('')
     try {
-      const [a, u] = await Promise.all([api.get('/admin/applications'), api.get('/admin/users')])
-      setForms(a); setUsers(u)
+      const [a, u, e] = await Promise.all([api.get('/admin/applications'), api.get('/admin/users'), api.get('/events')])
+      setForms(a); setUsers(u); setFolders(e.length)
     } catch (e) { setErr(e.message) }
   }, [])
 
@@ -55,28 +57,28 @@ export default function AdminPanel() {
 
   return (
     <div className="container">
-      <Heading kicker={`SIGNED IN AS ${user.email.toUpperCase()}`}>Admin Console</Heading>
+      <Heading kicker={`Signed in as ${user.email}`}>Admin Console</Heading>
 
       <div className="stats">
         <div className="tile stat"><b>{forms.length}</b><span>FORMS IN THE CSV</span></div>
         <div className="tile stat"><b>{users.length}</b><span>GOOGLE ACCOUNTS</span></div>
         <div className="tile stat"><b>{users.filter((u) => u.role === 'admin').length}</b><span>ADMINS SIGNED IN</span></div>
-        <div className="tile stat"><b>9</b><span>EVENT FOLDERS</span></div>
+        <div className="tile stat"><b>{folders}</b><span>EVENT FOLDERS</span></div>
       </div>
 
       <div className="auth-tabs">
-        <button className={`cbtn ${tab === 'forms' ? '' : 'ghost'}`} onClick={() => setTab('forms')}><span>SUBMITTED FORMS</span></button>
-        <button className={`cbtn ${tab === 'users' ? '' : 'ghost'}`} onClick={() => setTab('users')}><span>ACCOUNTS</span></button>
-        <CyberButton variant="alt" to="/events">UPLOAD EVENT PHOTOS</CyberButton>
+        <button className={`cbtn ${tab === 'forms' ? '' : 'ghost'}`} onClick={() => setTab('forms')}><span>Submitted forms</span></button>
+        <button className={`cbtn ${tab === 'users' ? '' : 'ghost'}`} onClick={() => setTab('users')}><span>Accounts</span></button>
+        <CyberButton variant="ghost" to="/events">Manage event gallery</CyberButton>
       </div>
 
-      {err && <div className="notice err">⚠ {err}</div>}
+      {err && <div className="notice err">{err}</div>}
 
       {tab === 'forms' && (
         <>
           <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
-            <CyberButton onClick={() => api.download('/admin/applications.csv', 'applications.csv').catch((e) => setErr(e.message))}>⬇ DOWNLOAD THE CSV FILE</CyberButton>
-            <CyberButton variant="ghost" onClick={load}>↻ REFRESH</CyberButton>
+            <CyberButton onClick={() => api.download('/admin/applications.csv', 'applications.csv').catch((e) => setErr(e.message))}><Icon name="download" size={16} />Download CSV</CyberButton>
+            <CyberButton variant="ghost" onClick={load}><Icon name="refresh" size={16} />Refresh</CyberButton>
           </div>
           <Table cols={FORM_COLS} rows={forms} empty="No forms submitted yet. The CSV file only has its header row." />
         </>

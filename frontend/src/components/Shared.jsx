@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from './Navbar.jsx'
 import Logo from './Logo.jsx'
+import Icon from './Icons.jsx'
 
+// variant: '' (primary) | 'ghost' (secondary) | 'danger'
 export function CyberButton({ to, onClick, children, variant = '', type = 'button', ...rest }) {
   const cls = `cbtn ${variant}`
   if (to) return <Link to={to} className={cls} {...rest}><span>{children}</span></Link>
@@ -11,8 +13,8 @@ export function CyberButton({ to, onClick, children, variant = '', type = 'butto
 export function Heading({ kicker, children }) {
   return (
     <div className="heading reveal">
-      {kicker && <div className="kicker">{'// ' + kicker}</div>}
-      <h2 className="glitch" data-text={children}>{children}</h2>
+      {kicker && <div className="kicker">{kicker}</div>}
+      <h2>{children}</h2>
       <div className="h-line"><i /></div>
     </div>
   )
@@ -27,10 +29,10 @@ export function PageNav() {
   return (
     <div className="pagenav">
       <button className="cbtn ghost" disabled={!prev} onClick={() => prev && nav(prev.to)}>
-        <span>« BACK{prev ? ` : ${prev.label}` : ''}</span>
+        <span><Icon name="arrow-left" size={16} />{prev ? prev.label : 'Back'}</span>
       </button>
       <button className="cbtn" disabled={!next} onClick={() => next && nav(next.to)}>
-        <span>{next ? `NEXT : ${next.label}` : 'END'} »</span>
+        <span>{next ? next.label : 'End'}<Icon name="arrow-right" size={16} /></span>
       </button>
     </div>
   )
@@ -41,7 +43,7 @@ export function BackBar({ to = '/' }) {
   const nav = useNavigate()
   return (
     <div className="pagenav">
-      <button className="cbtn ghost" onClick={() => nav(to)}><span>« BACK TO HOME</span></button>
+      <button className="cbtn ghost" onClick={() => nav(to)}><span><Icon name="arrow-left" size={16} />Back to home</span></button>
     </div>
   )
 }
@@ -59,11 +61,9 @@ export function LogoStrip() {
 export function Footer() {
   return (
     <footer className="footer">
-      <div className="footer-line" />
       <div className="footer-row">
-        <span>© 2026 THE TECH SOCIETY · CYBERSECURITY DOMAIN</span>
-        <span>SAVEETHA ENGINEERING COLLEGE · AUTONOMOUS · AFFILIATED TO ANNA UNIVERSITY</span>
-        <span className="blink">▮ SYSTEM ONLINE</span>
+        <span>© 2026 The Tech Society · Cybersecurity Domain</span>
+        <span>Saveetha Engineering College · Autonomous · Affiliated to Anna University</span>
       </div>
     </footer>
   )

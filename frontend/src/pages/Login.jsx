@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { Heading } from '../components/Shared.jsx'
+import Icon from '../components/Icons.jsx'
 import { useAuth } from '../auth.jsx'
 import { API_CONFIGURED } from '../api.js'
 
@@ -26,11 +27,11 @@ export default function Login() {
 
   return (
     <div className="container narrow">
-      <Heading kicker="IDENTIFY YOURSELF">{mode === 'signup' ? 'Create Account' : 'Login'}</Heading>
+      <Heading kicker="Account">{mode === 'signup' ? 'Create Account' : 'Login'}</Heading>
 
       <div className="auth-tabs">
-        <button className={`cbtn ${mode === 'login' ? '' : 'ghost'}`} onClick={() => setMode('login')}><span>LOGIN</span></button>
-        <button className={`cbtn ${mode === 'signup' ? '' : 'ghost'}`} onClick={() => setMode('signup')}><span>CREATE ACCOUNT</span></button>
+        <button className={`cbtn ${mode === 'login' ? '' : 'ghost'}`} onClick={() => setMode('login')}><span>Login</span></button>
+        <button className={`cbtn ${mode === 'signup' ? '' : 'ghost'}`} onClick={() => setMode('signup')}><span>Create account</span></button>
       </div>
 
       {!API_CONFIGURED && (
@@ -39,8 +40,8 @@ export default function Login() {
 
       <div className="tile auth-card reveal in">
         <div className="google-box">
-          <div className="big-ico">🔐</div>
-          <h3>{mode === 'signup' ? 'CREATE YOUR ACCOUNT WITH GOOGLE' : 'LOGIN WITH GOOGLE'}</h3>
+          <div className="big-ico"><Icon name="lock" size={34} /></div>
+          <h3>{mode === 'signup' ? 'Create your account with Google' : 'Login with Google'}</h3>
           <p className="auth-note">
             {mode === 'signup'
               ? 'Pick your Google account below and your account is created on the spot.'
@@ -65,13 +66,13 @@ export default function Login() {
           )}
 
           {busy && <div className="progress"><i /></div>}
-          {err && <div className="notice err" role="alert">⚠ {err}</div>}
+          {err && <div className="notice err" role="alert">{err}</div>}
         </div>
       </div>
 
       <div className="pagenav">
-        <button className="cbtn ghost" onClick={() => nav(-1)}><span>« BACK</span></button>
-        <button className="cbtn" onClick={() => nav('/')}><span>HOME »</span></button>
+        <button className="cbtn ghost" onClick={() => nav(-1)}><span><Icon name="arrow-left" size={16} />Back</span></button>
+        <button className="cbtn" onClick={() => nav('/')}><span>Home<Icon name="arrow-right" size={16} /></span></button>
       </div>
     </div>
   )

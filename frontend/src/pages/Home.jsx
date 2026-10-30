@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect } from 'react'
 import Logo from '../components/Logo.jsx'
+import Icon from '../components/Icons.jsx'
 import { CyberButton, Heading, PageNav, LogoStrip } from '../components/Shared.jsx'
-import { useTyper, useCount } from '../hooks.js'
+import { useCount } from '../hooks.js'
 
 function Stat({ n, suffix = '', label }) {
   const ref = useRef(null)
@@ -21,43 +22,42 @@ function Stat({ n, suffix = '', label }) {
 }
 
 const FEATURES = [
-  { i: '🛡', t: 'Ethical Hacking', d: 'Learn how attackers think so you can defend like a pro.' },
-  { i: '🔐', t: 'Cryptography', d: 'From classic ciphers to modern encryption, hands-on.' },
-  { i: '🏴', t: 'CTF Battles', d: 'Capture-the-flag contests, wargames and live challenges.' },
-  { i: '🕸', t: 'Network Defense', d: 'Firewalls, IDS, packet analysis and secure design.' },
-  { i: '🧬', t: 'Digital Forensics', d: 'Trace the evidence and reconstruct cyber incidents.' },
-  { i: '🤖', t: 'AI for Security', d: 'Using machine learning to detect threats faster.' },
+  { i: 'shield', t: 'Ethical Hacking', d: 'Understand how attackers think so that you can defend systems with confidence.' },
+  { i: 'key', t: 'Cryptography', d: 'From classical ciphers to modern encryption, with hands-on practice.' },
+  { i: 'flag', t: 'Capture the Flag', d: 'Contests, wargames and live challenges that build practical skill.' },
+  { i: 'network', t: 'Network Defense', d: 'Firewalls, intrusion detection, packet analysis and secure design.' },
+  { i: 'search', t: 'Digital Forensics', d: 'Collect evidence and reconstruct the timeline of a cyber incident.' },
+  { i: 'cpu', t: 'AI for Security', d: 'Applying machine learning to detect and respond to threats faster.' },
 ]
 
 export default function Home() {
-  const typed = useTyper(['Defend. Detect. Decrypt.', 'Think like a hacker.', 'Secure the digital future.', 'Collaborate. Innovate.'])
   return (
     <div className="container">
       <section className="hero">
         <div className="hero-logo reveal">
-          <Logo file="techsociety.png" label="The Tech Society" size={300} invertOnLight className="hero-ts" />
+          <Logo file="techsociety.png" label="The Tech Society" size={280} invertOnLight className="hero-ts" />
         </div>
         <div className="hero-text">
-          <div className="kicker reveal">// WELCOME, OPERATIVE</div>
-          <h1 className="hero-h glitch" data-text="CYBERSECURITY">CYBERSECURITY</h1>
-          <h2 className="hero-sub glitch accent" data-text="TECH SOCIETY">TECH SOCIETY</h2>
-          <p className="typed">&gt; {typed}<i className="caret" /></p>
+          <div className="kicker reveal">The Tech Society · Saveetha Engineering College</div>
+          <h1 className="hero-h">Cybersecurity</h1>
+          <h2 className="hero-sub">Domain</h2>
+          <p className="tagline">Learn. Defend. Secure.</p>
           <p className="lead reveal">
-            Welcome to the Cybersecurity domain of The Tech Society, Saveetha Engineering College. We are a community of
-            curious minds who learn, build and break things responsibly, from ethical hacking and cryptography to network
-            defense and digital forensics. (Sample text, to be updated.)
+            Welcome to the Cybersecurity domain of The Tech Society. We are a student community that learns, builds and tests
+            systems responsibly, from ethical hacking and cryptography to network defense and digital forensics.
+            (Sample text, to be updated.)
           </p>
           <div className="btn-row">
-            <CyberButton to="/join">JOIN THE DOMAIN</CyberButton>
-            <CyberButton to="/events" variant="ghost">VIEW EVENTS</CyberButton>
-            <CyberButton to="/about" variant="alt">ABOUT US</CyberButton>
+            <CyberButton to="/join">Join the domain</CyberButton>
+            <CyberButton to="/events" variant="ghost">View events</CyberButton>
+            <CyberButton to="/about" variant="ghost">About us</CyberButton>
           </div>
         </div>
       </section>
 
-      <section className="logos-band reveal">
-        <div className="band-title">// OUR INSTITUTION</div>
-        <LogoStrip size={150} />
+      <section className="logos-band tile reveal">
+        <div className="band-title">Our institution</div>
+        <LogoStrip />
       </section>
 
       <section className="stats">
@@ -67,11 +67,11 @@ export default function Home() {
         <Stat n={100} suffix="+" label="ACTIVE MEMBERS" />
       </section>
 
-      <Heading kicker="WHAT WE DO">Our Arsenal</Heading>
+      <Heading kicker="Focus areas">What We Do</Heading>
       <section className="grid3">
         {FEATURES.map((f, i) => (
-          <div className="tile card reveal" key={f.t} style={{ transitionDelay: `${i * 70}ms` }}>
-            <div className="card-ico">{f.i}</div>
+          <div className="tile card reveal" key={f.t} style={{ transitionDelay: `${i * 60}ms` }}>
+            <div className="card-ico"><Icon name={f.i} size={22} /></div>
             <h3>{f.t}</h3>
             <p>{f.d}</p>
             <span className="card-idx">0{i + 1}</span>
