@@ -10,7 +10,7 @@ function soundFor(el) {
   if (is('.nav a, .pagenav button')) return 'nav'
   if (is('.icon-btn')) return el.closest('.settings') ? 'close' : 'open'
   if (is('.acc-head')) return 'open'
-  if (is('.folder, .photo, .chip, .member-photo')) return 'select'
+  if (is('.folder, .photo, .chip')) return 'select'
   if (is('.cbtn.ghost, .mini, .lb-nav')) return 'soft'
   if (is('.cbtn')) return 'click'
   return 'soft'
@@ -23,13 +23,22 @@ export default function SoundFx() {
   useEffect(() => { sfx.configure({ enabled: s.sound, volume: s.volume / 100 }) }, [s.sound, s.volume])
 
   useEffect(() => {
+    // the browser only allows audio after the first tap / click / key press: unlock it on that first one
+    const unlock = () => sfx.unlock()
+    addEventListener('pointerdown', unlock, { once: true })
+    addEventListener('keydown', unlock, { once: true })
+
     const onClick = (e) => {
       const el = e.target.closest && e.target.closest('button, a, [role="button"]')
       if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return
-      sfx.play(soundFor(el))
+      sfx.play(soundFor(el), undefined, true)
     }
     document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
+    return () => {
+      document.removeEventListener('click', onClick, true)
+      removeEventListener('pointerdown', unlock)
+      removeEventListener('keydown', unlock)
+    }
   }, [])
 
   return null

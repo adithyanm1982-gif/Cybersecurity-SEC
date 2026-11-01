@@ -5,9 +5,7 @@ import Icon from '../components/Icons.jsx'
 import { useAuth } from '../auth.jsx'
 import { api, imgUrl, coverUrl } from '../api.js'
 import { sfx } from '../fx.js'
-
-const MAX_MB = 5
-const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+import { OK_TYPES, MAX_MB, prepareImages } from '../imageTools.js'
 
 // turn the API answer into what the page needs
 // cover priority: uploaded cover  >  photo chosen as cover  >  first photo  >  none
@@ -26,12 +24,6 @@ function normalize(list) {
     }
   })
 }
-
-// returns an error text, or null when the file is fine
-const checkFile = (f) =>
-  !OK_TYPES.includes(f.type) || f.size > MAX_MB * 1024 * 1024
-    ? `"${f.name}": only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.`
-    : null
 
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
 
@@ -86,7 +78,6 @@ export default function Events() {
     catch (e) { setMsg({ ok: false, t: e.message }); sfx.play('error'); return false }
     finally { setBusy(false) }
   }
-  const fail = (t) => { setMsg({ ok: false, t }); sfx.play('error') }
 
   // ----- folders: add / delete -----
   const addFolder = async (e) => {
@@ -101,14 +92,12 @@ export default function Events() {
     if (await act(() => api.del(`/events/${e.id}`), `Folder "${e.name}" deleted.`)) setOpenId(null)
   }
 
-  // ----- photos inside an album: add / delete -----
+  // ----- photos inside an album: add / delete (photos are shrunk in the browser first, so uploads stay fast) -----
   const onPick = (e) => {
     const files = [...e.target.files]
     e.target.value = ''
     if (!files.length) return
-    const bad = files.map(checkFile).find(Boolean)
-    if (bad) return fail(bad)
-    act(() => api.upload(`/events/${ev.id}/images`, files), `${plural(files.length, 'photo')} uploaded.`)
+    act(async () => api.upload(`/events/${ev.id}/images`, await prepareImages(files, 1600)), `${plural(files.length, 'photo')} uploaded.`)
   }
 
   // ----- album cover picture (works from the folder grid AND from inside the album) -----
@@ -118,9 +107,7 @@ export default function Events() {
     e.target.value = ''
     const id = coverFor.current
     if (!file || id == null) return
-    const bad = checkFile(file)
-    if (bad) return fail(bad)
-    act(() => api.putFile(`/events/${id}/cover-image`, file), 'Album cover uploaded.')
+    act(async () => api.putFile(`/events/${id}/cover-image`, (await prepareImages([file], 1400))[0]), 'Album cover uploaded.')
   }
   const removeCover = (e) => {
     if (!window.confirm('Remove the cover picture of this album?')) return
@@ -145,7 +132,7 @@ export default function Events() {
       {events && !ev && (
         <>
           <Heading kicker="Memory archive">Events Gallery</Heading>
-          <p className="lead center reveal">Open a folder to browse the photos of past Cybersecurity domain events.</p>
+          <p className="lead center">Open a folder to browse the photos of past Cybersecurity domain events.</p>
           {offline && <div className="notice warn center">The gallery is temporarily unavailable. (Free servers need about a minute to wake up: refresh the page.)</div>}
           {adminOn && <div className="notice ok center">Admin mode: add or delete folders, change a folder’s cover, or open a folder to manage its photos.</div>}
           {!user && <p className="hint center">Admin? Open Settings or <Link to="/login">log in</Link> to manage the gallery.</p>}
@@ -163,11 +150,11 @@ export default function Events() {
 
           <section className="folders">
             {events.map((e, i) => (
-              <div className="folder-card reveal" key={e.id} style={{ transitionDelay: `${Math.min(i, 8) * 40}ms` }}>
+              <div className="folder-card" key={e.id}>
                 <button className="folder" onClick={() => openAlbum(e.id)}>
                   <div className="folder-body">
                     {coverOf(e)
-                      ? <img src={coverOf(e)} alt={`${e.name} cover`} loading="lazy" />
+                      ? <img src={coverOf(e)} alt={`${e.name} cover`} loading="lazy" decoding="async" />
                       : <div className="cover-empty"><Icon name="image" size={30} /><span>No cover yet</span></div>}
                   </div>
                   <div className="folder-info">
@@ -236,9 +223,9 @@ export default function Events() {
 
           <section className="photos">
             {ev.photos.map((p, j) => (
-              <div className="photo-cell reveal" key={p.id} style={{ transitionDelay: `${Math.min(j, 8) * 50}ms` }}>
+              <div className="photo-cell" key={p.id}>
                 <button className="photo" onClick={() => setLight(j)}>
-                  <img src={p.url} alt={`${ev.name} photo ${j + 1}`} loading="lazy" />
+                  <img src={p.url} alt={`${ev.name} photo ${j + 1}`} loading="lazy" decoding="async" />
                   {ev.coverId === p.id && ev.coverChosen && <span className="photo-tag">Cover</span>}
                 </button>
                 {adminOn && (

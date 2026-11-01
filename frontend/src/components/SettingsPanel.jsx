@@ -93,15 +93,10 @@ export default function SettingsPanel({ open, onClose }) {
                 <input
                   type="range" min="0" max="100" step="5" value={s.volume} aria-label="Volume"
                   onChange={(e) => set('volume', Number(e.target.value))}
-                  onPointerUp={() => sfx.play('click')}
-                  onKeyUp={() => sfx.play('click')}
+                  onPointerUp={() => sfx.play('click', undefined, true)}
+                  onKeyUp={() => sfx.play('click', undefined, true)}
                 />
               </div>
-            </div>
-
-            <div>
-              <div className="set-title">Background</div>
-              <Toggle k="rain" label="Code stream" hint="faint falling characters" />
             </div>
 
             <div>

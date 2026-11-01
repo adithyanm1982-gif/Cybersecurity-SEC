@@ -13,11 +13,14 @@ const cfg = { enabled: true, volume: 0.9 }
 
 const masterGain = () => 0.2 + cfg.volume * 1.6 // volume 0..1  ->  loud and clear, the limiter catches the peaks
 
+const watchers = new Set()
+
 function ensure() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext
     if (!AC) return null
     ctx = new AC()
+    ctx.onstatechange = () => watchers.forEach((fn) => fn())
     bus = ctx.createGain()
     master = ctx.createGain()
     master.gain.value = masterGain()
@@ -108,49 +111,60 @@ const SOUNDS = {
     tone({ f: 1470, dur: 0.08, type: 'sine', vol: 0.26, delay: 0.045 })
   },
   open: () => { // settings, menus, panels: whoosh up
-    noise({ dur: 0.28, vol: 0.26, from: 300, to: 3200, q: 1.5 })
-    tone({ f: 220, f2: 470, dur: 0.26, type: 'sine', vol: 0.32 })
+    noise({ dur: 0.26, vol: 0.24, from: 400, to: 3600, q: 1.5 })
+    tone({ f: 320, f2: 640, dur: 0.22, type: 'sine', vol: 0.3 })
   },
   close: () => { // closing: whoosh down
-    noise({ dur: 0.22, vol: 0.22, from: 3200, to: 300, q: 1.5 })
-    tone({ f: 470, f2: 220, dur: 0.2, type: 'sine', vol: 0.28 })
+    noise({ dur: 0.2, vol: 0.2, from: 3600, to: 400, q: 1.5 })
+    tone({ f: 640, f2: 320, dur: 0.18, type: 'sine', vol: 0.26 })
   },
-  danger: () => { // delete / log out: low falling thud
-    tone({ f: 330, f2: 70, dur: 0.34, type: 'sawtooth', vol: 0.3, lp: 1400 })
-    noise({ dur: 0.24, vol: 0.2, from: 1300, to: 180, type: 'lowpass' })
+  danger: () => { // delete / log out: short descending digital "denied" zap
+    tone({ f: 760, f2: 240, dur: 0.13, type: 'square', vol: 0.2, lp: 2600 })
+    noise({ dur: 0.12, vol: 0.14, from: 2600, to: 500, q: 1.5 })
   },
   success: () => { // upload saved, form sent: rising three-note chime
     ;[660, 880, 1320].forEach((f, i) => tone({ f, dur: 0.16, type: 'triangle', vol: 0.34, delay: i * 0.085 }))
     tone({ f: 1760, dur: 0.3, type: 'sine', vol: 0.16, delay: 0.26 })
   },
-  error: () => { // something failed: two low buzzes
-    tone({ f: 190, dur: 0.18, type: 'sawtooth', vol: 0.34, lp: 900 })
-    tone({ f: 145, dur: 0.24, type: 'sawtooth', vol: 0.34, lp: 900, delay: 0.17 })
+  error: () => { // something failed: two short falling beeps
+    tone({ f: 330, dur: 0.09, type: 'square', vol: 0.2, lp: 2200 })
+    tone({ f: 247, dur: 0.14, type: 'square', vol: 0.2, lp: 2200, delay: 0.11 })
   },
 
-  // ---- intro: cyberpunk boot sequence ----
-  introBlip: (i = 0) => { // a boot line appears
-    tone({ f: 900 + i * 220, dur: 0.055, type: 'square', vol: 0.22, lp: 6000 })
-    tone({ f: 1800 + i * 330, dur: 0.04, type: 'square', vol: 0.12, delay: 0.05, lp: 6000 })
+  // ---- intro: cyberpunk boot sequence (bright synth + digital glitch, nothing low or rumbling) ----
+  introBlip: (i = 0) => { // a boot line appears: three quick rising data chirps
+    const base = 1100 + i * 260
+    ;[0, 1, 2].forEach((k) => tone({ f: base * (1 + k * 0.25), dur: 0.04, type: 'square', vol: 0.15, delay: k * 0.045, lp: 7000 }))
   },
-  introRise: () => { // tension riser before the title
-    noise({ dur: 1.5, vol: 0.34, from: 200, to: 9000, q: 3 })
-    tone({ f: 70, f2: 520, dur: 1.5, type: 'sawtooth', vol: 0.22, lp: 1800 })
+  introRise: () => { // tension: an accelerating minor arpeggio climbing up, with a rising digital hiss
+    const notes = [220, 261.63, 329.63, 392, 440, 523.25, 659.25, 783.99, 880, 1046.5, 1318.5, 1568, 1760, 2093]
+    let t = 0
+    let step = 0.15
+    notes.forEach((f, i) => {
+      tone({ f, dur: 0.11, type: 'square', vol: 0.11 + i * 0.01, delay: t, lp: 3400 })
+      t += step
+      step = Math.max(0.05, step * 0.83)
+    })
+    noise({ dur: 1.4, vol: 0.14, from: 1500, to: 11000, q: 1.2, type: 'highpass' })
   },
-  introHit: () => { // title impact: sub drop + glitch zaps
-    tone({ f: 150, f2: 36, dur: 1.2, type: 'sine', vol: 0.95 })
-    tone({ f: 58, dur: 0.8, type: 'sawtooth', vol: 0.26, lp: 380 })
-    noise({ dur: 0.6, vol: 0.4, from: 4500, to: 200, type: 'lowpass' })
-    for (let i = 0; i < 4; i++) noise({ dur: 0.05, vol: 0.28, from: 3000 + i * 900, to: 6000, type: 'highpass', delay: 0.07 + i * 0.075 })
+  introHit: () => { // title: bright detuned synth stab (A minor), laser zap and glitch bursts
+    ;[440, 523.25, 659.25, 783.99].forEach((f) => {
+      tone({ f, dur: 0.95, type: 'sawtooth', vol: 0.13, lp: 2800, attack: 0.008 })
+      tone({ f: f * 1.008, dur: 0.95, type: 'sawtooth', vol: 0.1, lp: 2800, attack: 0.008 })
+    })
+    tone({ f: 3400, f2: 260, dur: 0.26, type: 'square', vol: 0.15, lp: 6500 }) // laser zap
+    tone({ f: 2093, dur: 0.7, type: 'sine', vol: 0.16, delay: 0.03 }) // metallic ping
+    noise({ dur: 0.35, vol: 0.28, from: 900, to: 9000, q: 1.5 }) // digital whoosh
+    for (let i = 0; i < 4; i++) noise({ dur: 0.045, vol: 0.24, from: 3500 + i * 900, to: 8000, type: 'highpass', delay: 0.09 + i * 0.07 }) // glitch
   },
-  introAccess: () => { // "access granted": dark synth chord with a high ping
-    ;[220, 277.18, 329.63, 440].forEach((f) => tone({ f, dur: 1.9, type: 'sawtooth', vol: 0.13, lp: 1500, attack: 0.05 }))
-    tone({ f: 1760, dur: 0.6, type: 'sine', vol: 0.22, delay: 0.1 })
-    tone({ f: 2637, dur: 0.5, type: 'sine', vol: 0.12, delay: 0.22 })
+  introAccess: () => { // "access granted": shimmering high arpeggio over a soft pad
+    ;[659.25, 783.99, 987.77, 1318.5, 1568, 1975.5].forEach((f, i) => tone({ f, dur: 0.2, type: 'triangle', vol: 0.22, delay: i * 0.07 }))
+    ;[440, 523.25, 659.25].forEach((f) => tone({ f, dur: 1.8, type: 'sine', vol: 0.1, attack: 0.2 }))
+    tone({ f: 2637, dur: 0.6, type: 'sine', vol: 0.12, delay: 0.45 })
   },
-  introOut: () => { // the intro dissolves into the site
-    noise({ dur: 0.8, vol: 0.3, from: 400, to: 7000, q: 1 })
-    tone({ f: 330, f2: 990, dur: 0.6, type: 'triangle', vol: 0.26 })
+  introOut: () => { // the intro dissolves into the site: quick bright sweep
+    noise({ dur: 0.6, vol: 0.2, from: 2000, to: 12000, q: 1, type: 'highpass' })
+    tone({ f: 600, f2: 2400, dur: 0.35, type: 'triangle', vol: 0.2 })
   },
 }
 
@@ -160,11 +174,21 @@ export const sfx = {
     cfg.volume = Math.min(1, Math.max(0, volume))
     if (master) master.gain.value = masterGain()
   },
-  // browsers only allow audio after a click: call this from a click handler
+  // browsers only allow audio after a tap / click / key press: this is called on the first one
   unlock() { ensure() },
-  play(name, arg) {
+  // true while sound is switched on but the browser is still blocking it (used for the "tap for sound" hint)
+  locked() { return cfg.enabled && Boolean(ctx) && ctx.state !== 'running' },
+  watch(fn) { watchers.add(fn); return () => watchers.delete(fn) },
+  // fromClick = true when called straight from a tap / click (then it may unlock the audio itself)
+  play(name, arg, fromClick = false) {
     if (!cfg.enabled || !SOUNDS[name]) return
-    try { if (ensure()) SOUNDS[name](arg) } catch { /* sound is optional: never break the page */ }
+    try {
+      const c = ensure()
+      if (!c) return
+      if (c.state === 'running') SOUNDS[name](arg)
+      // Never schedule sounds while blocked: they would all burst out together when audio finally unlocks.
+      else if (fromClick) c.resume().then(() => SOUNDS[name](arg)).catch(() => {})
+    } catch { /* sound is optional: never break the page */ }
   },
 }
 

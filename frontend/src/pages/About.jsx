@@ -5,10 +5,26 @@ import { Heading, PageNav, CyberButton } from '../components/Shared.jsx'
 import { useAuth } from '../auth.jsx'
 import { api, memberPhotoUrl } from '../api.js'
 import { sfx } from '../fx.js'
+import { OK_TYPES, prepareImages } from '../imageTools.js'
 
-const MAX_MB = 5
-const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const DOMAINS = ['INTELLIGENT SYSTEMS', 'GAME & APP DEVELOPMENT', 'CYBERSECURITY', 'MACHINE LEARNING', 'DOMAIN 05 (TBA)']
+// Facts checked against the official Saveetha Engineering College website (saveetha.ac.in/about-sec)
+// and the official Tech Society website (techsociety.saveetha.in).
+const SEC_FACTS = [
+  ['Established', '2001'],
+  ['Founder Chairman', 'Dr. N. M. Veeraiyan'],
+  ['Status', 'Autonomous (UGC) since 2019-20'],
+  ['Affiliation', 'Anna University, Chennai · approved by AICTE'],
+  ['Accreditation', 'NAAC ‘A’ grade (CGPA 3.19) · NBA: 5 UG programmes'],
+  ['Ranking', 'NIRF 2024, Engineering: 201-300 band'],
+  ['Location', 'Saveetha Nagar, Thandalam, Chennai - 602105'],
+]
+const COMMUNITIES = [
+  { name: 'Cyber Security', text: 'Security protocols, threat detection and professional skills.', hot: true },
+  { name: 'Game & App Development', text: 'Game development and mobile app creation.' },
+  { name: 'Machine Learning', text: 'Building models that learn from data to solve real problems.' },
+  { name: 'Web Development', text: 'Designing and building modern websites and web applications.' },
+  { name: 'Intelligent Systems', text: 'AI, smart systems and IoT for real-world automation.' },
+]
 const BLANK = { id: null, name: '', role: '', department: '', linkedin: '' }
 
 // only real web links may sit behind the LinkedIn icon
@@ -53,10 +69,8 @@ export default function About() {
     e.target.value = ''
     const id = photoFor.current
     if (!file || id == null) return
-    if (!OK_TYPES.includes(file.type) || file.size > MAX_MB * 1024 * 1024) {
-      setMsg({ ok: false, t: `Only JPG, PNG, WEBP or GIF up to ${MAX_MB} MB.` }); sfx.play('error'); return
-    }
-    act(() => api.putFile(`/team/members/${id}/photo`, file), 'Photo saved.')
+    // the photo is shrunk in the browser first, so even a big phone photo uploads quickly
+    act(async () => api.putFile(`/team/members/${id}/photo`, (await prepareImages([file], 700))[0]), 'Photo saved.')
   }
   const removePhoto = (m) => window.confirm('Remove this profile photo?') && act(() => api.del(`/team/members/${m.id}/photo`), 'Photo removed.')
 
@@ -86,30 +100,58 @@ export default function About() {
       <Heading kicker="Who we are">About Us</Heading>
 
       <section className="about-split">
-        <article className="tile about-card reveal">
+        <article className="tile about-card">
           <Logo file="college.png" label="Saveetha Engineering College" size={110} banner trim="alpha" className="about-logo" />
           <h3>SAVEETHA ENGINEERING COLLEGE</h3>
           <div className="tags"><span>AUTONOMOUS</span><span>AFFILIATED TO ANNA UNIVERSITY</span></div>
           <p>
-            Saveetha Engineering College, established in 2001 under the motto “Be the Best”, is an autonomous institution
-            affiliated to Anna University. It is committed to academic excellence, research and innovation, producing
-            engineers ready for the world. (Sample text, to be updated.)
+            Saveetha Engineering College (SEC) was established in 2001 by its Founder Chairman, Dr. N. M. Veeraiyan, and is
+            managed by the Saveetha Medical and Educational Trust. Located at Thandalam, Chennai, it is an autonomous
+            institution affiliated to Anna University and approved by AICTE. SEC has more than 6,400 learners in
+            undergraduate, postgraduate (including MBA) and doctoral programmes, among them an undergraduate programme in
+            Computer Science and Engineering (Cyber Security). It is also recognised as a Scientific and Industrial
+            Research Organisation (SIRO) by the Government of India.
           </p>
+          <ul className="facts">
+            {SEC_FACTS.map(([k, v]) => (
+              <li key={k}><span>{k}</span><b>{v}</b></li>
+            ))}
+          </ul>
+          <div className="vm">
+            <h4>Vision</h4>
+            <p>To set the standard of excellence in engineering education and high-quality research in science and technology.</p>
+            <h4>Mission</h4>
+            <p>To promote academic excellence, widen intellectual horizons, and build self-discipline and high ideals for the total development of every individual.</p>
+          </div>
         </article>
 
-        <article className="tile about-card reveal" style={{ transitionDelay: '120ms' }}>
+        <article className="tile about-card">
           <Logo file="techsociety.png" label="The Tech Society" size={170} invertOnLight className="about-logo ts" />
           <h3>THE TECH SOCIETY</h3>
           <div className="tags"><span>COLLABORATE</span><span>INNOVATE</span></div>
           <p>
-            The Tech Society is the student technology community of the college, bringing together learners to build
-            projects, host contests and grow with industry exposure. It is organised into five domains. (Sample text, to be updated.)
+            The Tech Society is a student-led technology community at Saveetha Engineering College. It was started in 2023
+            by Mr. C. Obed Otto, Dean – ICT, together with students, and is supported by SCoFT. Created by learners, for
+            learners, it gives students a platform to learn new technologies, collaborate on projects and events, solve
+            real-world problems and grow both technical and soft skills, through workshops, peer-led tutorials and
+            mentorship. Newcomers are welcomed and encouraged.
           </p>
+          <h4 className="list-title">Tech communities</h4>
           <ul className="domains">
-            {DOMAINS.map((d, i) => (
-              <li key={d} className={d === 'CYBERSECURITY' ? 'hot' : ''}><b>0{i + 1}</b> {d}</li>
+            {COMMUNITIES.map((c, i) => (
+              <li key={c.name} className={c.hot ? 'hot' : ''}><b>0{i + 1}</b><span><strong>{c.name}</strong>{c.text}</span></li>
             ))}
           </ul>
+          <p>
+            Its flagship event is <strong>Hack Hustle</strong>, a 24-hour hackathon with problem statements across streams
+            such as Cybersecurity and Machine Learning. The second edition, Hack Hustle 2.0, was held on 29-30 April 2026.
+          </p>
+          <div className="vm">
+            <h4>Vision</h4>
+            <p>A vibrant college tech community where diverse learners unite to explore, innovate and advance technology through collaboration, mentorship and research.</p>
+            <h4>Mission</h4>
+            <p>To turn raw talent into skilled coders, game creators and AI pioneers, and to solve real-world challenges with code through collaboration and innovation.</p>
+          </div>
         </article>
       </section>
 
@@ -127,11 +169,11 @@ export default function About() {
         {(members || []).map((m, i) => {
           const link = safeUrl(m.linkedin)
           return (
-            <article className="tile member reveal" key={m.id} style={{ transitionDelay: `${Math.min(i, 7) * 50}ms` }}>
+            <article className="tile member" key={m.id}>
               <div className="avatar">
                 <div className="avatar-ring" />
                 <div className="avatar-in">
-                  {m.photo_token ? <img src={memberPhotoUrl(m.id, m.photo_token)} alt={m.name ? `Photo of ${m.name}` : 'Profile photo'} loading="lazy" /> : <Icon name="user" size={46} />}
+                  {m.photo_token ? <img src={memberPhotoUrl(m.id, m.photo_token)} alt={m.name ? `Photo of ${m.name}` : 'Profile photo'} loading="lazy" decoding="async" /> : <Icon name="user" size={46} />}
                 </div>
               </div>
               <h3 className="m-name">{m.name || <span className="m-pending">Name to be announced</span>}</h3>

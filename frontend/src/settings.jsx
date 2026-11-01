@@ -5,7 +5,6 @@ const KEY = 'ts-settings-v2' // new key: everyone starts from the new profession
 const DEFAULTS = {
   theme: 'dark',
   accent: 'cyan',
-  rain: false, // optional "code stream" background
   sound: true,
   volume: 90, // percent: high by default
   reduceMotion: false,

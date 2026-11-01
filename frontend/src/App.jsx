@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Intro from './components/Intro.jsx'
-import Background from './components/Background.jsx'
 import SoundFx from './components/SoundFx.jsx'
 import Navbar from './components/Navbar.jsx'
 import SettingsPanel from './components/SettingsPanel.jsx'
 import { Footer } from './components/Shared.jsx'
-import { useReveal } from './hooks.js'
 import Home from './pages/Home.jsx'
 import About from './pages/About.jsx'
 import Events from './pages/Events.jsx'
@@ -22,7 +20,6 @@ export default function App() {
   const [booted, setBooted] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const loc = useLocation()
-  useReveal()
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [loc.pathname])
   useEffect(() => {
@@ -33,7 +30,6 @@ export default function App() {
 
   return (
     <>
-      <Background />
       <SoundFx />
       {!booted && <Intro onDone={() => setBooted(true)} />}
       {booted && (
