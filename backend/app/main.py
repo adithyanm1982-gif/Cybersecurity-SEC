@@ -9,7 +9,7 @@ from .config import settings
 from .csvstore import ensure_csv
 from .database import Base, SessionLocal, engine
 from .models import CsvFile, Event
-from .routers import admin, applications, auth, events, team
+from .routers import admin, applications, auth, events, recon, team
 from .routers.team import seed_team
 
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +55,7 @@ app.include_router(applications.router, prefix="/api")
 app.include_router(events.router, prefix="/api")
 app.include_router(team.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(recon.router, prefix="/api")
 
 
 @app.get("/api/health")
