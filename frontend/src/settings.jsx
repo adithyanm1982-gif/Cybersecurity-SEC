@@ -1,49 +1,45 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-const KEY = 'ts-settings-v2' // new key: everyone starts from the new professional defaults
+const KEY = 'ts-theme-v3'
 
-const DEFAULTS = {
-  theme: 'dark',
+// everything except the theme is now fixed (sound is always on, one accent colour)
+const FIXED = {
   accent: 'cyan',
   sound: true,
-  volume: 90, // percent: high by default
+  volume: 90,
   reduceMotion: false,
   fontSize: 'medium',
 }
 
-// one refined accent colour per theme (the light version is darker so text stays readable on white)
 export const ACCENTS = {
   cyan: { dark: '#22d3ee', light: '#0e7490' },
-  blue: { dark: '#60a5fa', light: '#1d4ed8' },
-  green: { dark: '#34d399', light: '#047857' },
-  amber: { dark: '#fbbf24', light: '#b45309' },
 }
 
 const Ctx = createContext(null)
 export const useSettings = () => useContext(Ctx)
 
 export function SettingsProvider({ children }) {
-  const [s, setS] = useState(() => {
+  const [theme, setTheme] = useState(() => {
     try {
-      return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+      return localStorage.getItem(KEY) === 'light' ? 'light' : 'dark'
     } catch {
-      return DEFAULTS
+      return 'dark'
     }
   })
 
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(s)) } catch {}
+    try { localStorage.setItem(KEY, theme) } catch {}
     const root = document.documentElement
-    const a = ACCENTS[s.accent] || ACCENTS.cyan
-    root.style.setProperty('--accent', a[s.theme] || a.dark)
-    root.dataset.theme = s.theme
-    root.dataset.motion = s.reduceMotion ? 'reduced' : 'full'
-    root.dataset.font = s.fontSize
+    root.style.setProperty('--accent', ACCENTS.cyan[theme])
+    root.dataset.theme = theme
+    root.dataset.motion = 'full'
+    root.dataset.font = 'medium'
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', s.theme === 'light' ? '#f3f5f9' : '#05070b')
-  }, [s])
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#f3f5f9' : '#05070b')
+  }, [theme])
 
-  const set = (k, v) => setS((p) => ({ ...p, [k]: v }))
-  const reset = () => setS(DEFAULTS)
+  const s = { ...FIXED, theme }
+  const set = (k, v) => { if (k === 'theme') setTheme(v === 'light' ? 'light' : 'dark') }
+  const reset = () => setTheme('dark')
   return <Ctx.Provider value={{ s, set, reset }}>{children}</Ctx.Provider>
 }

@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import Logo from './Logo.jsx'
 import Icon from './Icons.jsx'
+import Avatar from './Avatar.jsx'
 import { useAuth } from '../auth.jsx'
 
 export const ROUTES = [
@@ -15,17 +15,15 @@ export const ROUTES = [
 ]
 
 // Header layout
-//   row 1: brand  |  college logos  |  account chip + settings (+ menu button on phones)
+//   row 1: brand  |  college logos  |  PROFILE button + SETTINGS button
 //   row 2: the page links (HOME ... CONTACTS, and ADMIN only for an admin)
 export default function Navbar({ onSettings }) {
-  const [open, setOpen] = useState(false)
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin } = useAuth()
   const nav = useNavigate()
-  const close = () => setOpen(false)
 
   return (
     <header className="topbar">
-      <Link to="/" className="brand" onClick={close}>
+      <Link to="/" className="brand">
         <Logo file="techsociety.png" label="Tech Society" size={52} invertOnLight className="brand-logo" />
         <div className="brand-text">
           <span>TECH SOCIETY</span>
@@ -40,23 +38,29 @@ export default function Navbar({ onSettings }) {
       </div>
 
       <div className="top-actions">
-        {user && (
-          <div className="auth-chip" title={user.email}>
+        {/* PROFILE button: Google photo + name when signed in, LOGIN when a guest */}
+        {user ? (
+          <button className="auth-chip profile-btn" title={user.email} aria-label="Profile and account" onClick={onSettings}>
+            <Avatar user={user} size={30} className="nav-avatar" />
             <span className={`role-badge ${isAdmin ? 'admin' : ''}`}>{isAdmin ? 'Admin' : 'Member'}</span>
             <span className="auth-name">{(user.name || user.email).split(' ')[0]}</span>
-            <button className="auth-out" onClick={() => { logout(); close(); nav('/') }} title="Log out" aria-label="Log out"><Icon name="power" size={16} /></button>
-          </div>
+          </button>
+        ) : (
+          <button className="auth-chip profile-btn" aria-label="Login" onClick={() => nav('/login', { state: { mode: 'login' } })}>
+            <span className="auth-name guest-login">LOGIN</span>
+          </button>
         )}
-        <button className="icon-btn" title="Settings" aria-label="Settings" onClick={() => { close(); onSettings() }}><Icon name="gear" size={19} /></button>
-        <button className="icon-btn burger" onClick={() => setOpen((o) => !o)} title="Menu" aria-label="Menu" aria-expanded={open}><Icon name={open ? 'close' : 'menu'} size={19} /></button>
+
+        {/* SETTINGS button: account actions + dark / light mode */}
+        <button className="icon-btn" title="Settings" aria-label="Settings" onClick={onSettings}><Icon name="gear" size={19} /></button>
       </div>
 
-      <nav className={`nav ${open ? 'open' : ''}`} aria-label="Main">
+      <nav className="nav" aria-label="Main">
         {ROUTES.map((r) => (
-          <NavLink key={r.to} to={r.to} end={r.to === '/'} onClick={close}>{r.label}</NavLink>
+          <NavLink key={r.to} to={r.to} end={r.to === '/'}>{r.label}</NavLink>
         ))}
         {/* the ADMIN page exists ONLY for the admin login */}
-        {isAdmin && <NavLink to="/admin" className="nav-admin" onClick={close}>ADMIN</NavLink>}
+        {isAdmin && <NavLink to="/admin" className="nav-admin">ADMIN</NavLink>}
       </nav>
     </header>
   )
