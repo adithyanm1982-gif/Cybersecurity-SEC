@@ -57,7 +57,7 @@ export default function Join() {
         <form className="tile form reveal in" onSubmit={submit}>
           <p className="hint">Signed in as <b>{user.email}</b>. This e-mail is saved with your form.</p>
           <label>Name<input required minLength={2} maxLength={120} value={f.name} onChange={on('name')} placeholder="Your full name" /></label>
-          <label>Register number<input required minLength={3} maxLength={40} value={f.register_no} onChange={on('register_no')} placeholder="e.g. 2117xxxxxx" /></label>
+          <label>Register number<input required minLength={3} maxLength={40} value={f.register_no} onChange={on('register_no')} placeholder="e.g. 21222xxxxxxx" /></label>
           <div className="row2">
             <label>Department<input required minLength={2} maxLength={80} value={f.department} onChange={on('department')} placeholder="e.g. CSE" /></label>
             <label>Year
@@ -67,7 +67,7 @@ export default function Join() {
               </select>
             </label>
           </div>
-          <label>Phone (optional)<input maxLength={20} value={f.phone} onChange={on('phone')} placeholder="+91 ..." /></label>
+          <label>Phone (required)<input maxLength={20} value={f.phone} onChange={on('phone')} placeholder="+91 ..." /></label>
           <label>Why do you want to join?<textarea rows="4" maxLength={2000} value={f.reason} onChange={on('reason')} placeholder="Tell us about your interest in cybersecurity..." /></label>
           {err && <div className="notice err" role="alert">{err}</div>}
           <CyberButton type="submit" disabled={busy}>{busy ? 'Submitting...' : 'Submit application'}</CyberButton>
